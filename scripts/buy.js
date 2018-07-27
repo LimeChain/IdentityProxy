@@ -10,7 +10,7 @@ var provider;
 
 (async function () {
 
-	if (process.argv.length < 8) {
+	if (process.argv.length < 9) {
 		throw new Error('Invalid arguments');
 	}
 
@@ -20,6 +20,7 @@ var provider;
 	const deloyerPK = process.argv[5];
 	const slogan = process.argv[6];
 	const wei = Number.parseInt(process.argv[7]);
+	const reward = Number.parseInt(process.argv[8]);
 
 
 	provider = new providers.JsonRpcProvider('http://localhost:8545', providers.networks.unspecified);
@@ -41,7 +42,7 @@ var provider;
 	const buyDescriptor = (billboardContract.interface.functions.buy(slogan));
 	const buyData = buyDescriptor.data;
 
-	const buyDataHash = utils.solidityKeccak256(['uint256', 'uint256', 'bytes'], [nonce.toString(), wei, utils.arrayify(buyData)]);
+	const buyDataHash = utils.solidityKeccak256(['uint256', 'address', 'uint256', 'uint256', 'bytes'], [reward, billboardContract.address, nonce.toString(), wei, utils.arrayify(buyData)]);
 	var hashData = ethers.utils.arrayify(buyDataHash);
 	const buyDataHashSignature = signerWallet.signMessage(hashData);
 
@@ -49,8 +50,8 @@ var provider;
 	deployerWallet.provider = provider;
 
 	const identityContract = new ethers.Contract(identityAddress, IdentityProxy.abi, deployerWallet);
-	await identityContract.execute(billboardContract.address, wei, buyData, buyDataHashSignature, {
-		value: wei
+	await identityContract.execute(reward, billboardContract.address, wei, buyData, buyDataHashSignature, {
+		value: 2 * wei
 	});
 
 	const finalPrice = await billboardContract.price();
@@ -61,5 +62,7 @@ var provider;
 
 	const billboardSlogan = await billboardContract.slogan();
 	console.log(`Billboard Slogan: ${billboardSlogan}`);
+	const balance = await provider.getBalance(deployerWallet.address);
+	console.log(balance.toString());
 
 })()
