@@ -10,22 +10,30 @@ var provider;
 
 (async function () {
 
-	if (process.argv.length < 7) {
+	if (process.argv.length < 8) {
 		throw new Error('Invalid arguments');
 	}
 
-	const serviceAddress = process.argv[2]; // 0xc9707E1e496C12f1Fa83AFbbA8735DA697cdBf64
-	const identityAddress = process.argv[3]; // 0x4ad3F07BEFDC54511449A1f553E36A653c82eA57
-	const signerPK = process.argv[4]; // fac0bc9325ad342033afe956e83f0bf8f1e863c1c3e956bc75d66961fe4cd186
-	const deloyerPK = process.argv[5]; // fac0bc9325ad342033afe956e83f0bf8f1e863c1c3e956bc75d66961fe4cd186
+	const serviceAddress = process.argv[2];
+	const identityAddress = process.argv[3];
+	const signerPK = process.argv[4];
+	const deloyerPK = process.argv[5];
 	const slogan = process.argv[6];
+	const wei = Number.parseInt(process.argv[7]);
+
 
 	provider = new providers.JsonRpcProvider('http://localhost:8545', providers.networks.unspecified);
 
 	const signerWallet = new Wallet('0x' + signerPK);
 	signerWallet.provider = provider;
 
+	const nonceContract = new ethers.Contract(identityAddress, IdentityProxy.abi, provider);
+	let nonce = await nonceContract.nonce();
+
+	console.log(nonce.toString())
+
 	const billboardContract = new ethers.Contract(serviceAddress, BillboardService.abi, signerWallet);
+
 	const initialPrice = await billboardContract.price();
 
 	console.log(`CurrentPrice: ${initialPrice}`);
@@ -33,7 +41,7 @@ var provider;
 	const buyDescriptor = (billboardContract.interface.functions.buy(slogan));
 	const buyData = buyDescriptor.data;
 
-	const buyDataHash = utils.solidityKeccak256(['bytes'], [utils.arrayify(buyData)]);
+	const buyDataHash = utils.solidityKeccak256(['uint256', 'uint256', 'bytes'], [nonce.toString(), wei, utils.arrayify(buyData)]);
 	var hashData = ethers.utils.arrayify(buyDataHash);
 	const buyDataHashSignature = signerWallet.signMessage(hashData);
 
@@ -41,8 +49,8 @@ var provider;
 	deployerWallet.provider = provider;
 
 	const identityContract = new ethers.Contract(identityAddress, IdentityProxy.abi, deployerWallet);
-	await identityContract.execute(billboardContract.address, buyData, buyDataHashSignature, {
-		value: 100004
+	await identityContract.execute(billboardContract.address, wei, buyData, buyDataHashSignature, {
+		value: wei
 	});
 
 	const finalPrice = await billboardContract.price();
