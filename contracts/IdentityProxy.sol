@@ -49,7 +49,6 @@ contract IdentityProxy {
 		// Override this to make your reward logic work
 		msg.sender.transfer(reward);
 		return true;
-
 	}
     
 }

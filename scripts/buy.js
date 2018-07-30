@@ -50,9 +50,7 @@ var provider;
 	deployerWallet.provider = provider;
 
 	const identityContract = new ethers.Contract(identityAddress, IdentityProxy.abi, deployerWallet);
-	await identityContract.execute(reward, billboardContract.address, wei, buyData, buyDataHashSignature, {
-		value: 2 * wei
-	});
+	await identityContract.execute(reward, billboardContract.address, wei, buyData, buyDataHashSignature);
 
 	const finalPrice = await billboardContract.price();
 	console.log(`Billboard Price: ${finalPrice}`);
@@ -64,5 +62,7 @@ var provider;
 	console.log(`Billboard Slogan: ${billboardSlogan}`);
 	const balance = await provider.getBalance(deployerWallet.address);
 	console.log(balance.toString());
+	const balance2 = await provider.getBalance(signerWallet.address);
+	console.log(balance2.toString());
 
 })()
