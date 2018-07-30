@@ -14,6 +14,12 @@ contract IdentityProxy {
 	 * @param addressHash - keccak256 of the address of the signer
 	 * @param addressSig - signed addressHash by the signer
 	 */
+
+	function() public payable {
+
+	}
+
+	
 	constructor(bytes32 addressHash, bytes addressSig) public {
 		address signer = ECTools.prefixedRecover(addressHash, addressSig);
 		bytes32 signerHash = keccak256(abi.encodePacked(signer));
