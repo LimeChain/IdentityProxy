@@ -2,11 +2,11 @@ pragma solidity ^0.4.18;
 
 library ECTools {
 
-  // /**
-  //  * @dev Recover signer address from a message by using his signature
-  //  * @param originalMessage bytes32 message, the originalMessage is the signed message. What is recovered is the signer address.
-  //  * @param sig bytes signature
-  //  */
+  /**
+   * @dev Recover signer address from a message by using his signature
+   * @param originalMessage bytes32 message, the originalMessage is the signed message. What is recovered is the signer address.
+   * @param signedMessage bytes signature
+   */
   function recover(bytes32 originalMessage, bytes signedMessage) public pure returns (address) {
     bytes32 r;
     bytes32 s;

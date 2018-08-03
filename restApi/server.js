@@ -6,7 +6,7 @@ const handlebars = require('./config/handlebars');
 const port = require('./config/settings.js').server.port;
 const keys = require('./config/keys.js')
 
-let createIDProxy = require('./../scripts/createProxy.js');
+let createIDProxy = require('./../scripts/createIDProxy.js');
 let executeService = require('./../scripts/executeService.js');
 
 let app = express();
