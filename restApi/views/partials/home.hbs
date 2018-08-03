@@ -165,7 +165,7 @@
             let hashData = hash(signerWallet)
             let address = await axios({
                 method: 'post',
-                url: '/sign',
+                url: '/create',
                 data: {
                     addressHash: hashData.addressHash,
                     addressSig: hashData.addressSig

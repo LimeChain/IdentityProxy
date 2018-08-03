@@ -63,3 +63,5 @@ typings/
 .etherlime-store
 
 build
+
+keys.js
