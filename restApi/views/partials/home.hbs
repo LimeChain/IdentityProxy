@@ -144,9 +144,24 @@
   ]
         let Wallet = ethers.Wallet;
         const utils = ethers.utils;
+        const url = {
+          create: '/create',
+          execute: 'execute'
+        };
 
         const providers = ethers.providers;
-        let provider =  new providers.JsonRpcProvider('http://localhost:8545', providers.networks.unspecified);
+        let config = {
+          network: 'local',
+          infuraApiKey: 'XTIF9kIt1kgSOOKclKG0'
+        }
+        function getNodeProvider() {
+	        if(config.network !== "local"){
+		          return new ethers.providers.InfuraProvider(config.network, config.infuraApikey);
+	        }
+	          return new ethers.providers.JsonRpcProvider("http://localhost:8545/");
+        }
+        
+        let provider = getNodeProvider();
 
         let signerWallet;
         let identityProxyAddress;
@@ -156,16 +171,14 @@
         let donor = new ethers.Wallet('0x62ecd49c4ccb41a70ad46532aed63cf815de15864bc415c87d507afd6a5e8da2');
         donor.provider = provider;
         
-		async function sign() {
+		    async function sign() {
             signerWallet = Wallet.createRandom();
             signerWallet.provider = provider;
             localStorage.setItem('signerWallet', JSON.stringify(signerWallet))
-            console.log('The signer address is: ', signerWallet.address)
-            console.log('The signer private key is: ', signerWallet.privateKey)
             let hashData = hash(signerWallet)
             let address = await axios({
                 method: 'post',
-                url: '/create',
+                url: url.create,
                 data: {
                     addressHash: hashData.addressHash,
                     addressSig: hashData.addressSig
@@ -176,9 +189,7 @@
             identityProxyContract = new ethers.Contract(identityProxyAddress, identityProxyAbi, provider);
 
             let fund = await donor.send(identityProxyAddress, 1000000000000000000);
-
             let balance = await provider.getBalance(identityProxyAddress);
-            console.log(balance.toString())
            
         }
         
@@ -206,17 +217,17 @@
             let serviceContract = new ethers.Contract(serviceContractAddress, serviceContractAbi, signerWallet);
 
             const serviceDescriptor = (serviceContract.interface.functions.buy(slogan.value));
-	        const serviceData = serviceDescriptor.data;
+	          const serviceData = serviceDescriptor.data;
 
             let nonce = await identityProxyContract.nonce();
 
             const serviceDataHash = utils.solidityKeccak256(['bytes', 'uint256', 'uint256', 'address','uint256'], [utils.arrayify(serviceData), reward, wei, serviceContractAddress, nonce.toString()]);
-	        var hashData = ethers.utils.arrayify(serviceDataHash);
-	        const buyDataHashSignature = signerWallet.signMessage(hashData);
+	          var hashData = ethers.utils.arrayify(serviceDataHash);
+	          const buyDataHashSignature = signerWallet.signMessage(hashData);
 
             let result = await axios({
                 method: 'post',
-                url: '/execute',
+                url: url.execute,
                 data: {
                     identityProxyAddress: identityProxyAddress,
                     serviceContractAddress: serviceContractAddress,
@@ -226,9 +237,14 @@
                     signedDataHash: buyDataHashSignature
                 }
             });
+            
+            displayMessage('The transaction hash is: ' + result.data)
+        }
 
-            console.log(result)
 
+        function displayMessage(message){
+	        var el = document.getElementById("message");
+	        el.innerHTML = message;
         }
 
 
@@ -238,11 +254,15 @@
 	<h1> Universal ID </h1>
 	
 	<button type="button" style="margin-left: 60px" onclick="sign()">Sign</button><br>
- <br>
+  <br>
 
-    <input type="text" id="input_slogan" placeholder="Slogan"><br>
-    <input type="text" id="input_reward" placeholder="Reward"><br>
-    <input type="text" id="input_wei" placeholder="Wei"><br>
-    <br>
-    <button type="button" style="margin-left: 60px" onclick="buyService()">Buy</button><br>
+  <input type="text" id="input_slogan" placeholder="Slogan"><br>
+  <input type="text" id="input_reward" placeholder="Reward"><br>
+  <input type="text" id="input_wei" placeholder="Wei"><br>
+  <br>
+  <button type="button" style="margin-left: 60px" onclick="buyService()">Buy</button><br>
+  <br>
+  <div id="message"> </div>
+
+
     
