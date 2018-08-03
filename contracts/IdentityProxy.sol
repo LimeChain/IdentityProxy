@@ -7,16 +7,15 @@ contract IdentityProxy {
 	address public owner;
 
 	uint256 public nonce;
-    
-	// /**
-	//  * @dev sets the owner of this identity to the person that has signed this contract
-	//  * 
-	//  * @param addressHash - keccak256 of the address of the signer
-	//  * @param addressSig - signed addressHash by the signer
-	//  */
 
 	function() public payable {}
-
+    
+	/**
+	 * @dev sets the owner of this identity to the person that has signed this contract
+	 * 
+	 * @param addressHash - keccak256 of the address of the signer
+	 * @param addressSig - signed addressHash by the signer
+	 */
 	
 	constructor(bytes32 addressHash, bytes addressSig) public {
 		address signer = ECTools.prefixedRecover(addressHash, addressSig);

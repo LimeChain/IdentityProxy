@@ -1,6 +1,3 @@
-
-
-
 const etherlime = require('etherlime');
 const IdentityProxy = require('../build/IdentityProxy.json');
 

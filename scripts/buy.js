@@ -1,7 +1,3 @@
-
-
-
-
 const IdentityProxy = require('../build/IdentityProxy.json');
 const BillboardService = require('../build/BillboardService.json');
 
