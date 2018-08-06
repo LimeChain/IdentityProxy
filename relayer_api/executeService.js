@@ -4,8 +4,8 @@ const ethers = require('ethers');
 const providers = ethers.providers;
 const Wallet = ethers.Wallet;
 const utils = ethers.utils;
-const keys = require('./../restApi/config/keys.js')
-const settings = require('./../restApi/config/settings.js');
+const keys = require('./config/keys.js')
+const settings = require('./config/settings.js');
 
 let serviceAddress = keys.serviceAddress;
 
