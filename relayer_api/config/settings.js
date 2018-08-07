@@ -3,7 +3,7 @@ const settings = {
         port: process.env.NODE_ENV || 3000
     },
     infuraApikey: "XTIF9kIt1kgSOOKclKG0",
-    network:'local'
+    network:'ropsten'
 }
  
 module.exports = settings;

@@ -151,7 +151,7 @@
 
         let providers = ethers.providers;
         let config = {
-          network: 'local',
+          network: 'ropsten',
           infuraApiKey: 'XTIF9kIt1kgSOOKclKG0'
         }
 
@@ -167,9 +167,9 @@
         let signerWallet;
         let identityProxyAddress;
         let identityProxyContract;
-        let serviceContractAddress = '0xc9707E1e496C12f1Fa83AFbbA8735DA697cdBf64'
+        let serviceContractAddress = '0x032Ab7E0d613a00863DA5881A356F4cF67266610'
         
-        let donor = new ethers.Wallet('0x62ecd49c4ccb41a70ad46532aed63cf815de15864bc415c87d507afd6a5e8da2');
+        let donor = new ethers.Wallet('0x12FF89704509CA185796448B22573012F5671C7F524BC980475FD3D04E8FFB0D');
         donor.provider = provider;
         
 		    async function sign() {
@@ -188,8 +188,9 @@
 
             identityProxyAddress = address.data.address;
             identityProxyContract = new ethers.Contract(identityProxyAddress, identityProxyAbi, provider);
+            console.log("ID", identityProxyAddress)
 
-            let fund = await donor.send(identityProxyAddress, 1000000000000000000);
+            let fund = await donor.send(identityProxyAddress, 80000000000);
             let balance = await provider.getBalance(identityProxyAddress);
            
         }
