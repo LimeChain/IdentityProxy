@@ -1,0 +1,269 @@
+<script>
+        let serviceContractAbi = [
+    {
+      "constant": true,
+      "inputs": [],
+      "name": "slogan",
+      "outputs": [
+        {
+          "name": "",
+          "type": "string"
+        }
+      ],
+      "payable": false,
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "constant": true,
+      "inputs": [],
+      "name": "billboardOwner",
+      "outputs": [
+        {
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "payable": false,
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "constant": true,
+      "inputs": [],
+      "name": "price",
+      "outputs": [
+        {
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "payable": false,
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "constant": false,
+      "inputs": [
+        {
+          "name": "inSlogan",
+          "type": "string"
+        }
+      ],
+      "name": "buy",
+      "outputs": [],
+      "payable": true,
+      "stateMutability": "payable",
+      "type": "function"
+    }
+  ]
+        let identityProxyAbi = [
+    {
+      "constant": true,
+      "inputs": [],
+      "name": "owner",
+      "outputs": [
+        {
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "payable": false,
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "constant": true,
+      "inputs": [],
+      "name": "nonce",
+      "outputs": [
+        {
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "payable": false,
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "name": "addressHash",
+          "type": "bytes32"
+        },
+        {
+          "name": "addressSig",
+          "type": "bytes"
+        }
+      ],
+      "payable": false,
+      "stateMutability": "nonpayable",
+      "type": "constructor"
+    },
+    {
+      "payable": true,
+      "stateMutability": "payable",
+      "type": "fallback"
+    },
+    {
+      "constant": false,
+      "inputs": [
+        {
+          "name": "target",
+          "type": "address"
+        },
+        {
+          "name": "relayerReward",
+          "type": "uint256"
+        },
+        {
+          "name": "value",
+          "type": "uint256"
+        },
+        {
+          "name": "data",
+          "type": "bytes"
+        },
+        {
+          "name": "dataHashSignature",
+          "type": "bytes"
+        }
+      ],
+      "name": "execute",
+      "outputs": [
+        {
+          "name": "",
+          "type": "bool"
+        }
+      ],
+      "payable": true,
+      "stateMutability": "payable",
+      "type": "function"
+    }
+  ]
+        let Wallet = ethers.Wallet;
+        let utils = ethers.utils;
+        let url = {
+          create: '/create',
+          execute: 'execute'
+        };
+
+        let providers = ethers.providers;
+        let config = {
+          network: 'local',
+          infuraApiKey: 'XTIF9kIt1kgSOOKclKG0'
+        }
+
+        function getNodeProvider() {
+	        if(config.network !== "local"){
+		          return new ethers.providers.InfuraProvider(config.network, config.infuraApikey);
+	        }
+	          return new ethers.providers.JsonRpcProvider("http://localhost:8545/");
+        }
+        
+        let provider = getNodeProvider();
+
+        let signerWallet;
+        let identityProxyAddress;
+        let identityProxyContract;
+        let serviceContractAddress = '0xc9707E1e496C12f1Fa83AFbbA8735DA697cdBf64'
+        
+        let donor = new ethers.Wallet('0x62ecd49c4ccb41a70ad46532aed63cf815de15864bc415c87d507afd6a5e8da2');
+        donor.provider = provider;
+        
+		    async function sign() {
+            signerWallet = Wallet.createRandom();
+            signerWallet.provider = provider;
+            localStorage.setItem('signerWallet', JSON.stringify(signerWallet))
+            let hashData = hash(signerWallet)
+            let address = await axios({
+                method: 'post',
+                url: url.create,
+                data: {
+                    addressHash: hashData.addressHash,
+                    addressSig: hashData.addressSig
+                }
+            })
+
+            identityProxyAddress = address.data.address;
+            identityProxyContract = new ethers.Contract(identityProxyAddress, identityProxyAbi, provider);
+
+            let fund = await donor.send(identityProxyAddress, 1000000000000000000);
+            let balance = await provider.getBalance(identityProxyAddress);
+           
+        }
+        
+
+        function hash(signerWallet) {
+            const addressHash = utils.solidityKeccak256(['address'], [signerWallet.address]);
+            var addressHashBytes = ethers.utils.arrayify(addressHash);
+            const addressSig = signerWallet.signMessage(addressHashBytes);
+            return {addressHash, addressSig}
+        }
+
+
+        async function buyService(){
+            
+            let slogan = document.getElementById("input_slogan")
+            let rewardInput = document.getElementById("input_reward")
+            let weiInput = document.getElementById("input_wei")
+
+            let reward = rewardInput.value;
+            let wei = weiInput.value;
+
+            let weiNum = Number(wei)
+            let rewardNum = Number(reward)
+
+            let serviceContract = new ethers.Contract(serviceContractAddress, serviceContractAbi, signerWallet);
+
+            let serviceDescriptor = (serviceContract.interface.functions.buy(slogan.value));
+	          let serviceData = serviceDescriptor.data;
+
+            let nonce = await identityProxyContract.nonce();
+
+            let serviceDataHash = utils.solidityKeccak256(['bytes', 'uint256', 'uint256', 'address','uint256'], [utils.arrayify(serviceData), reward, wei, serviceContractAddress, nonce.toString()]);
+	          let hashData = ethers.utils.arrayify(serviceDataHash);
+	          let buyDataHashSignature = signerWallet.signMessage(hashData);
+
+            let result = await axios({
+                method: 'post',
+                url: url.execute,
+                data: {
+                    identityProxyAddress: identityProxyAddress,
+                    serviceContractAddress: serviceContractAddress,
+                    wei: weiNum,
+                    reward: rewardNum,
+                    data: serviceData,
+                    signedDataHash: buyDataHashSignature
+                }
+            });
+            
+            displayMessage('The transaction hash is: ' + result.data)
+        }
+
+
+        function displayMessage(message){
+	        let el = document.getElementById("message");
+	        el.innerHTML = message;
+        }
+
+
+</script>
+
+
+	<h1> Universal ID </h1>
+	
+	<button type="button" style="margin-left: 60px" onclick="sign()">Sign</button><br>
+  <br>
+
+  <input type="text" id="input_slogan" placeholder="Slogan"><br>
+  <input type="text" id="input_reward" placeholder="Reward"><br>
+  <input type="text" id="input_wei" placeholder="Wei"><br>
+  <br>
+  <button type="button" style="margin-left: 60px" onclick="buyService()">Buy</button><br>
+  <br>
+  <div id="message"> </div>
+
+
+    

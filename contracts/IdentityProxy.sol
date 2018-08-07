@@ -7,6 +7,8 @@ contract IdentityProxy {
 	address public owner;
 
 	uint256 public nonce;
+
+	function() public payable {}
     
 	/**
 	 * @dev sets the owner of this identity to the person that has signed this contract
@@ -14,6 +16,7 @@ contract IdentityProxy {
 	 * @param addressHash - keccak256 of the address of the signer
 	 * @param addressSig - signed addressHash by the signer
 	 */
+	
 	constructor(bytes32 addressHash, bytes addressSig) public {
 		address signer = ECTools.prefixedRecover(addressHash, addressSig);
 		bytes32 signerHash = keccak256(abi.encodePacked(signer));
@@ -21,8 +24,8 @@ contract IdentityProxy {
 		owner = signer;
 	}
 
-	modifier onlySigner(uint256 relayerReward, address target, uint256 value, bytes data, bytes dataHashSignature) {
-		bytes32 dataHash = keccak256(abi.encodePacked(relayerReward, target, nonce, value, data));
+	modifier onlyValidDataAndSigner(uint256 relayerReward, address target, uint256 value, bytes data, bytes dataHashSignature) {
+		bytes32 dataHash = keccak256(abi.encodePacked(data, relayerReward, value, target, nonce));
 		address signer = ECTools.prefixedRecover(dataHash, dataHashSignature);
 		require(signer == owner);
 		_;
@@ -37,7 +40,8 @@ contract IdentityProxy {
 	 * @param data - the data to be sent to be target
 	 * @param dataHashSignature - signed bytes of the keccak256 of target, nonce, value and data keccak256(target, nonce, value, data)
 	 */
-	function execute(uint256 relayerReward, address target, uint256 value, bytes data, bytes dataHashSignature) public payable onlySigner(relayerReward, target, value, data, dataHashSignature) returns (bool) {
+
+	function execute(address target, uint256 relayerReward, uint256 value, bytes data, bytes dataHashSignature) public payable onlyValidDataAndSigner(relayerReward, target, value, data, dataHashSignature) returns (bool) {
 		 // solium-disable-next-line security/no-call-value
 		nonce++;
     	require(target.call.value(value)(data));
