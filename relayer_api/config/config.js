@@ -12,6 +12,19 @@ function getNodeProvider() {
 	return new ethers.providers.JsonRpcProvider("http://localhost:8545/");
 }
 
-let deployer = new etherlime.EtherlimeGanacheDeployer(keys.deployerPrivateKey);
+let deployer = getDeployer();
+
+const defaultConfigs = {
+	gasPrice: 20200000000,
+	gasLimit: 4700000
+}
+
+function getDeployer(){
+	if(settings.network !== 'local'){
+		return new etherlime.InfuraPrivateKeyDeployer(keys.deployerPrivateKey, settings.network, keys.infuraApikey, defaultConfigs)
+	}
+
+	return new etherlime.EtherlimeGanacheDeployer(keys.deployerPrivateKey);
+}
 
 module.exports = {provider, deployer};
