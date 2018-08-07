@@ -1,7 +1,7 @@
 let IdentityProxy = require('../build/IdentityProxy.json');
 let ethers = require('ethers');
 let Wallet = ethers.Wallet;
-let keys = require('./config/keys.js')
+let keys = require('./config/templates/keys.js')
 let config = require('./config/config.js');
 
 class ExecuteService {
