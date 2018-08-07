@@ -1,5 +1,7 @@
-const settings = require('./settings.js');
-const ethers = require('ethers');
+let ethers = require('ethers');
+let etherlime = require('etherlime');
+let settings = require('./settings.js');
+let keys = require('./keys.js');
 
 let provider = getNodeProvider();
 
@@ -10,4 +12,6 @@ function getNodeProvider() {
 	return new ethers.providers.JsonRpcProvider("http://localhost:8545/");
 }
 
-module.exports = {provider};
+let deployer = new etherlime.EtherlimeGanacheDeployer(keys.deployerPrivateKey);
+
+module.exports = {provider, deployer};

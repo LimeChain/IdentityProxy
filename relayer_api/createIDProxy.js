@@ -1,4 +1,3 @@
-let etherlime = require('etherlime');
 let IdentityProxy = require('../build/IdentityProxy.json');
 let ethers = require('ethers');
 let Wallet = ethers.Wallet;
@@ -8,14 +7,13 @@ let config = require('./config/config.js');
 
 class CreateIDProxy {
 	constructor(){
-		this.provider = config.provider;
 		this.deployerWallet = new Wallet(keys.deployerPrivateKey)
-		this.deployerWallet.provider = this.provider
+		this.deployerWallet.provider = config.provider
 	}
 
 	async createProxy(addressHash, addressSig) {
 
-		let deployer = new etherlime.EtherlimeGanacheDeployer(keys.deployerPrivateKey);
+		let deployer = config.deployer;
 		let libraries = {
 			"ECTools": keys.libraryAddress
 		}

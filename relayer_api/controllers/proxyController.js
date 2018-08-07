@@ -3,8 +3,6 @@ let ethers = require('ethers');
 let CreateIDProxy = require('./../createIDProxy.js');
 let ExecuterService = require('./../executeService.js');
 
-
-let executerService = new ExecuterService();
 let createProxyService = new CreateIDProxy();
 
 
@@ -30,7 +28,8 @@ let ProxyController = (function() {
     let execute = async function(req, res) {
         try{
             const body = _.pick(req.body, ['identityProxyAddress', 'serviceContractAddress', 'reward', 'wei', 'data', 'signedDataHash']);
-            let result = await executerService.executeService(body.identityProxyAddress, body.serviceContractAddress, body.reward, body.wei, body.data, body.signedDataHash)
+            let executerService = new ExecuterService(body.identityProxyAddress);
+            let result = await executerService.execute(body.serviceContractAddress, body.reward, body.wei, body.data, body.signedDataHash)
             res.send(result);
         } catch(e){
             res.status(400).send(e)
