@@ -11,6 +11,10 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "express-handlebars": "^3.0.0"
+    "etherlime": "^0.6.2",
+    "ethers": "^3.0.26",
+    "express": "^4.16.3",
+    "express-handlebars": "^3.0.0",
+    "lodash": "^4.17.10"
   }
 }
