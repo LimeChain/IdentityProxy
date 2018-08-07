@@ -1,5 +1,5 @@
 <script>
-        const serviceContractAbi =[
+        let serviceContractAbi = [
     {
       "constant": true,
       "inputs": [],
@@ -57,7 +57,7 @@
       "type": "function"
     }
   ]
-        const identityProxyAbi =[
+        let identityProxyAbi = [
     {
       "constant": true,
       "inputs": [],
@@ -143,17 +143,18 @@
     }
   ]
         let Wallet = ethers.Wallet;
-        const utils = ethers.utils;
-        const url = {
+        let utils = ethers.utils;
+        let url = {
           create: '/create',
           execute: 'execute'
         };
 
-        const providers = ethers.providers;
+        let providers = ethers.providers;
         let config = {
           network: 'local',
           infuraApiKey: 'XTIF9kIt1kgSOOKclKG0'
         }
+
         function getNodeProvider() {
 	        if(config.network !== "local"){
 		          return new ethers.providers.InfuraProvider(config.network, config.infuraApikey);
@@ -216,14 +217,14 @@
 
             let serviceContract = new ethers.Contract(serviceContractAddress, serviceContractAbi, signerWallet);
 
-            const serviceDescriptor = (serviceContract.interface.functions.buy(slogan.value));
-	          const serviceData = serviceDescriptor.data;
+            let serviceDescriptor = (serviceContract.interface.functions.buy(slogan.value));
+	          let serviceData = serviceDescriptor.data;
 
             let nonce = await identityProxyContract.nonce();
 
-            const serviceDataHash = utils.solidityKeccak256(['bytes', 'uint256', 'uint256', 'address','uint256'], [utils.arrayify(serviceData), reward, wei, serviceContractAddress, nonce.toString()]);
-	          var hashData = ethers.utils.arrayify(serviceDataHash);
-	          const buyDataHashSignature = signerWallet.signMessage(hashData);
+            let serviceDataHash = utils.solidityKeccak256(['bytes', 'uint256', 'uint256', 'address','uint256'], [utils.arrayify(serviceData), reward, wei, serviceContractAddress, nonce.toString()]);
+	          let hashData = ethers.utils.arrayify(serviceDataHash);
+	          let buyDataHashSignature = signerWallet.signMessage(hashData);
 
             let result = await axios({
                 method: 'post',
@@ -243,7 +244,7 @@
 
 
         function displayMessage(message){
-	        var el = document.getElementById("message");
+	        let el = document.getElementById("message");
 	        el.innerHTML = message;
         }
 

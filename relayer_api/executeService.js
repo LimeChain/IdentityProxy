@@ -1,27 +1,25 @@
-const IdentityProxy = require('../build/IdentityProxy.json');
-
-const ethers = require('ethers');
-const providers = ethers.providers;
-const Wallet = ethers.Wallet;
-const utils = ethers.utils;
-const keys = require('./config/keys.js')
-const settings = require('./config/settings.js');
-
+let IdentityProxy = require('../build/IdentityProxy.json');
+let ethers = require('ethers');
+let providers = ethers.providers;
+let Wallet = ethers.Wallet;
+let keys = require('./config/keys.js')
+let config = require('./config/config.js');
 let serviceAddress = keys.serviceAddress;
 
-function getNodeProvider() {
-	if(settings.network !== "local"){
-		return new ethers.providers.InfuraProvider(settings.network, settings.infuraApikey);
+
+class ExecuteService {
+	
+	constructor() {
+		this.provider = config.provider;
+		this.deployerWallet = new Wallet(keys.deployerPrivateKey)
+		this.deployerWallet.provider = this.provider
 	}
-	return new ethers.providers.JsonRpcProvider("http://localhost:8545/");
+
+	async executeService(identityProxyAddress, serviceContractAddress, reward, wei, data, signedDataHash){
+		let identityContract = new ethers.Contract(identityProxyAddress, IdentityProxy.abi, this.deployerWallet);
+		let transaction = await identityContract.execute(serviceContractAddress, reward, wei, data, signedDataHash);
+		return transaction.hash
+	}
 }
 
-async function executeService(identityProxyAddress, serviceContractAddress, reward, wei, data, signedDataHash, deployerWallet){
-	let provider = getNodeProvider()
-	deployerWallet.provider = provider
-	const identityContract = new ethers.Contract(identityProxyAddress, IdentityProxy.abi, deployerWallet);
-	let transaction = await identityContract.execute(serviceContractAddress, reward, wei, data, signedDataHash);
-	return transaction.hash
-}
-
-module.exports = executeService;
+module.exports = ExecuteService;
