@@ -21,6 +21,7 @@ contract IdentityContract is IIdentityContract, SharedStorage{
 		_;
 	}
 
+
 	/**
      * @dev sets the owner of this identity to the person that has signed this contract
      * 
