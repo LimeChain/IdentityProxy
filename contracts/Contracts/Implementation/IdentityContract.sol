@@ -6,13 +6,11 @@ import "../Proxy/SharedStorage.sol";
 
 contract IdentityContract is IIdentityContract, SharedStorage{
 	
-	address public owner;
-
 	uint256 public nonce;
 
 	bool isInited;
 
-	mapping(address => bool) public isOwner;
+	mapping(address => bool) public isSigner;
 
 	function() public payable {}
 
@@ -20,7 +18,6 @@ contract IdentityContract is IIdentityContract, SharedStorage{
 		require(isInited == false);
 		_;
 	}
-
 
 	/**
      * @dev sets the owner of this identity to the person that has signed this contract
@@ -33,16 +30,37 @@ contract IdentityContract is IIdentityContract, SharedStorage{
 		address signer = ECTools.prefixedRecover(addressHash, addressSig);
 		bytes32 signerHash = keccak256(abi.encodePacked(signer));
 		require(signerHash == addressHash);
-		owner = signer;
-		isOwner[owner] = true;
+
+		isSigner[signer] = true;
 		isInited = true;
 	}
 
 	modifier onlyValidSignature(uint256 relayerReward, address target, uint256 value, bytes data, bytes dataHashSignature) {
 		bytes32 dataHash = keccak256(abi.encodePacked(data, relayerReward, value, target, nonce));
 		address signer = ECTools.prefixedRecover(dataHash, dataHashSignature);
-		require(signer == owner);
+		require(isSigner[signer]);
 		_;
+	}
+
+	modifier onliSigner(bytes32 addressHash, bytes addressSig) {
+		address signer = ECTools.prefixedRecover(addressHash, addressSig);
+		bytes32 signerHash = keccak256(abi.encodePacked(signer));
+		require(signerHash == addressHash);
+		_;
+	}
+
+	//create modifier for  next two functions similar to Init function
+
+	function addSigner(address _signer, bytes32 addressHash, bytes addressSig) public onliSigner(addressHash, addressSig) {
+		isSigner[_signer] = true;
+	}
+
+	function removeSigner(address _signer, bytes32 addressHash, bytes addressSig) public onliSigner(addressHash, addressSig) {
+		isSigner[_signer] = false;
+	}
+
+	function checkSigner(address _signer) public view returns(bool){
+		return isSigner[_signer];
 	}
 
 	function getNonce() public view returns(uint256) {
