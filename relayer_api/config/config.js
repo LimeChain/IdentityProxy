@@ -1,7 +1,7 @@
 let ethers = require('ethers');
 let etherlime = require('etherlime');
 let settings = require('./settings.js');
-let keys = require('./keys.js');
+let keys = require('./templates/keys-templates.js');
 
 let provider = getNodeProvider();
 

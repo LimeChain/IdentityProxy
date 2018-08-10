@@ -21,14 +21,14 @@ let ProxyController = (function() {
     }
 
     async function createIdentityProxy(addressHash, addressSig) {
-        return await createProxyService.createProxy(addressHash, addressSig);
+        return address = await createProxyService.createProxy(addressHash, addressSig);
     }
 
 
     let execute = async function(req, res) {
         try{
-            const body = _.pick(req.body, ['identityProxyAddress', 'serviceContractAddress', 'reward', 'wei', 'data', 'signedDataHash']);
-            let executerService = new ExecuterService(body.identityProxyAddress);
+            const body = _.pick(req.body, ['identityAddress', 'serviceContractAddress', 'reward', 'wei', 'data', 'signedDataHash']);
+            let executerService = new ExecuterService(body.identityAddress);
             let result = await executerService.execute(body.serviceContractAddress, body.reward, body.wei, body.data, body.signedDataHash)
             res.send(result);
         } catch(e){
