@@ -1,21 +1,18 @@
 pragma solidity ^0.4.21;
 
-import "./IIdentityProxy.sol";
+import "./SharedStorage.sol";
 
-contract UpgradeableProxy {
-    IIdentityProxy identityProxyContract;
-
+contract IdentityProxy is SharedStorage {
 
 
     function () public payable {
-        delegatedFwd(identityProxyContract, msg.data);
+        delegatedFwd(contractImplementation, msg.data);
     }
 
-    function setIdentityProxyContract(address _identityProxyContract) {
-        require(_identityProxyContract != address(0));
-        identityProxyContract = IIdentityProxy (_identityProxyContract);
+    constructor (address _identityContractAddress) public {
+        contractImplementation = _identityContractAddress;
     }
-
+    
     function delegatedFwd(address _dst, bytes _calldata) internal {
         assembly {
             switch extcodesize(_dst) case 0 { revert(0, 0) }

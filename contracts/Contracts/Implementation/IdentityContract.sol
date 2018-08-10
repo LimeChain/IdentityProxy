@@ -1,16 +1,24 @@
 pragma solidity ^0.4.24;
 
-import "./IIdentityProxy.sol";
+import "./IIdentityContract.sol";
 import "./ECTools.sol";
+import "../Proxy/SharedStorage.sol";
 
-contract IdentityProxy is IIdentityProxy{
+contract IdentityContract is IIdentityContract, SharedStorage{
 	
 	address public owner;
 
 	uint256 public nonce;
 
+	bool isInited;
+
 	function() public payable {}
-    
+
+	modifier onlyNotInited() {
+		require(isInited == false);
+		_;
+	}
+
 	/**
      * @dev sets the owner of this identity to the person that has signed this contract
      * 
@@ -18,18 +26,23 @@ contract IdentityProxy is IIdentityProxy{
      * @param addressSig - signed addressHash by the signer
      */
 
-	function init(bytes32 addressHash, bytes addressSig) public {
-	address signer = ECTools.prefixedRecover(addressHash, addressSig);
-	bytes32 signerHash = keccak256(abi.encodePacked(signer));
-	require(signerHash == addressHash);
+	function init(bytes32 addressHash, bytes addressSig) public onlyNotInited {
+		address signer = ECTools.prefixedRecover(addressHash, addressSig);
+		bytes32 signerHash = keccak256(abi.encodePacked(signer));
+		require(signerHash == addressHash);
 		owner = signer;
+		isInited = true;
 	}
 
 	modifier onlyValidDataAndSigner(uint256 relayerReward, address target, uint256 value, bytes data, bytes dataHashSignature) {
-	bytes32 dataHash = keccak256(abi.encodePacked(data, relayerReward, value, target, nonce));
-	address signer = ECTools.prefixedRecover(dataHash, dataHashSignature);
-	require(signer == owner);
+		bytes32 dataHash = keccak256(abi.encodePacked(data, relayerReward, value, target, nonce));
+		address signer = ECTools.prefixedRecover(dataHash, dataHashSignature);
+		require(signer == owner);
 		_;
+	}
+
+	function getNonce() public view returns(uint256) {
+		return nonce;
 	}
 
 	/**
