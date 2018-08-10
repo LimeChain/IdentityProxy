@@ -12,6 +12,8 @@ contract IdentityContract is IIdentityContract, SharedStorage{
 
 	bool isInited;
 
+	mapping(address => bool) public isOwner;
+
 	function() public payable {}
 
 	modifier onlyNotInited() {
@@ -31,6 +33,7 @@ contract IdentityContract is IIdentityContract, SharedStorage{
 		bytes32 signerHash = keccak256(abi.encodePacked(signer));
 		require(signerHash == addressHash);
 		owner = signer;
+		isOwner[owner] = true;
 		isInited = true;
 	}
 
