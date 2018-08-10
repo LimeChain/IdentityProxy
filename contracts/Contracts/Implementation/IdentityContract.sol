@@ -34,7 +34,7 @@ contract IdentityContract is IIdentityContract, SharedStorage{
 		isInited = true;
 	}
 
-	modifier onlyValidDataAndSigner(uint256 relayerReward, address target, uint256 value, bytes data, bytes dataHashSignature) {
+	modifier onlyValidSignature(uint256 relayerReward, address target, uint256 value, bytes data, bytes dataHashSignature) {
 		bytes32 dataHash = keccak256(abi.encodePacked(data, relayerReward, value, target, nonce));
 		address signer = ECTools.prefixedRecover(dataHash, dataHashSignature);
 		require(signer == owner);
@@ -55,7 +55,7 @@ contract IdentityContract is IIdentityContract, SharedStorage{
      * @param dataHashSignature - signed bytes of the keccak256 of target, nonce, value and data keccak256(target, nonce, value, data)
      */
 
-	function execute(address target, uint256 relayerReward, uint256 value, bytes data, bytes dataHashSignature) public payable onlyValidDataAndSigner(relayerReward, target, value, data, dataHashSignature) returns (bool) {
+	function execute(address target, uint256 relayerReward, uint256 value, bytes data, bytes dataHashSignature) public payable onlyValidSignature(relayerReward, target, value, data, dataHashSignature) returns (bool) {
 		// solium-disable-next-line security/no-call-value
 		nonce++;
 		require(target.call.value(value)(data));
