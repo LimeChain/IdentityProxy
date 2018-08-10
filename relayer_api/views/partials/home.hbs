@@ -57,36 +57,14 @@
       "type": "function"
     }
   ]
-        let identityProxyAbi = [
+        let identityProxyAbi =[
     {
-      "constant": true,
-      "inputs": [],
-      "name": "owner",
-      "outputs": [
-        {
-          "name": "",
-          "type": "address"
-        }
-      ],
-      "payable": false,
-      "stateMutability": "view",
-      "type": "function"
+      "payable": true,
+      "stateMutability": "payable",
+      "type": "fallback"
     },
     {
-      "constant": true,
-      "inputs": [],
-      "name": "nonce",
-      "outputs": [
-        {
-          "name": "",
-          "type": "uint256"
-        }
-      ],
-      "payable": false,
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
+      "constant": false,
       "inputs": [
         {
           "name": "addressHash",
@@ -97,14 +75,25 @@
           "type": "bytes"
         }
       ],
+      "name": "init",
+      "outputs": [],
       "payable": false,
       "stateMutability": "nonpayable",
-      "type": "constructor"
+      "type": "function"
     },
     {
-      "payable": true,
-      "stateMutability": "payable",
-      "type": "fallback"
+      "constant": true,
+      "inputs": [],
+      "name": "getNonce",
+      "outputs": [
+        {
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "payable": false,
+      "stateMutability": "view",
+      "type": "function"
     },
     {
       "constant": false,
@@ -165,9 +154,9 @@
         let provider = getNodeProvider();
 
         let signerWallet;
-        let identityProxyAddress;
-        let identityProxyContract;
-        let serviceContractAddress = '0xc9707E1e496C12f1Fa83AFbbA8735DA697cdBf64'
+        let identityAddress;
+        let identityContract;
+        let serviceContractAddress = '0x1456d1d7BC82A64e389541f754351D85AE02a271'
         
         let donor = new ethers.Wallet('0x62ecd49c4ccb41a70ad46532aed63cf815de15864bc415c87d507afd6a5e8da2');
         donor.provider = provider;
@@ -177,7 +166,7 @@
             signerWallet.provider = provider;
             localStorage.setItem('signerWallet', JSON.stringify(signerWallet))
             let hashData = hash(signerWallet)
-            let address = await axios({
+            let result = await axios({
                 method: 'post',
                 url: url.create,
                 data: {
@@ -186,11 +175,9 @@
                 }
             })
 
-            identityProxyAddress = address.data.address;
-            identityProxyContract = new ethers.Contract(identityProxyAddress, identityProxyAbi, provider);
-
-            let fund = await donor.send(identityProxyAddress, 1000000000000000000);
-            let balance = await provider.getBalance(identityProxyAddress);
+            identityAddress = result.data.toString();
+    
+            let fund = await donor.send(identityAddress, 1000000000000000000);
            
         }
         
@@ -220,17 +207,21 @@
             let serviceDescriptor = (serviceContract.interface.functions.buy(slogan.value));
 	          let serviceData = serviceDescriptor.data;
 
-            let nonce = await identityProxyContract.nonce();
+            identityContract = new ethers.Contract(identityAddress, identityProxyAbi, provider);
+      
 
+            let nonce = await identityContract.getNonce();
+      
             let serviceDataHash = utils.solidityKeccak256(['bytes', 'uint256', 'uint256', 'address','uint256'], [utils.arrayify(serviceData), reward, wei, serviceContractAddress, nonce.toString()]);
-	          let hashData = ethers.utils.arrayify(serviceDataHash);
+	          
+            let hashData = ethers.utils.arrayify(serviceDataHash);
 	          let buyDataHashSignature = signerWallet.signMessage(hashData);
 
             let result = await axios({
                 method: 'post',
                 url: url.execute,
                 data: {
-                    identityProxyAddress: identityProxyAddress,
+                    identityAddress: identityAddress,
                     serviceContractAddress: serviceContractAddress,
                     wei: weiNum,
                     reward: rewardNum,

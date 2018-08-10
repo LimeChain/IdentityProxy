@@ -1,12 +1,22 @@
-const etherlime = require('etherlime');
-const BillboardService = require('../build/BillboardService.json');
-const ECTools = require('../build/ECTools.json');
-const config = require('../relayer_api/config/config.js')
+let etherlime = require('etherlime');
+let BillboardService = require('../build/BillboardService.json');
+let IdentityContract = require('../build/IdentityContract.json')
+let ECTools = require('../build/ECTools.json');
+let config = require('../relayer_api/config/config.js')
+
 
 const deploy = async (network, secret) => {
-	const deployer = config.deployer;
+	let deployer = config.deployer;
+
 	await deployer.deploy(BillboardService);
-	await deployer.deploy(ECTools);
+	
+	let library = await deployer.deploy(ECTools);
+	let libraries = {
+			"ECTools": library.contractAddress
+		}
+
+	let identityContract = await deployer.deploy(IdentityContract,libraries)
+
 }
 
 module.exports = {

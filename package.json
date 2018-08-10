@@ -1,0 +1,32 @@
+{
+  "name": "restapi",
+  "version": "1.0.0",
+  "description": "The goal of this project is to have example of Identity proxy.",
+  "main": "hashParams.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node relayer_api/relayer.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "etherlime": "^0.6.4",
+    "ethers": "^3.0.26",
+    "express": "^4.16.3",
+    "express-handlebars": "^3.0.0",
+    "lodash": "^4.17.10",
+    "supertest": "^3.1.0"
+  },
+  "directories": {
+    "test": "test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/LimeChain/IdentityProxy.git"
+  },
+  "bugs": {
+    "url": "https://github.com/LimeChain/IdentityProxy/issues"
+  },
+  "homepage": "https://github.com/LimeChain/IdentityProxy#readme"
+}
