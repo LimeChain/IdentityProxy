@@ -4,7 +4,7 @@ contract IIdentityContract {
 
     function() public payable;
 
-    function init(bytes32 addressHash, bytes addressSig) public;
+    function getSigner(bytes32 raw, bytes sig) public view returns(address signer);
 
     function getNonce() public view returns(uint256);
 

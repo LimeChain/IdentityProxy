@@ -1,47 +1,55 @@
-let _ = require('lodash');
-let ethers = require('ethers');
-let CreateIDProxy = require('./../createIDProxy.js');
-let ExecuterService = require('./../executeService.js');
+const _ = require('lodash');
+const CreateService = require('./../services/createService.js');
+const ExecuteService = require('./../services/executeService.js');
 
-let createProxyService = new CreateIDProxy();
+const createServiceInstance = new CreateService();
+const executeServiceInstance = new ExecuteService();
 
-
-let ProxyController = (function() {
-    let createIDProxy = async function(req, res) {
-        try{
-            let reqBody = req.body;
+const ProxyController = (function () {
+    const create = async function (req, res) {
+        try {
+            const reqBody = req.body;
             const body = _.pick(reqBody, ['addressHash', 'addressSig'])
-            let idAddress = await createIdentityProxy(body.addressHash, body.addressSig)
-            res.send(idAddress)
-        } catch(e){
+            const result = await createServiceInstance.createProxy(body.addressHash, body.addressSig);
+            res.send(result)
+        } catch (e) {
             console.log(e)
             res.status(400).send(e)
         }
 
     }
 
-    async function createIdentityProxy(addressHash, addressSig) {
-        return address = await createProxyService.createProxy(addressHash, addressSig);
+    const deploy = async function (req, res) {
+        try {
+            const reqBody = req.body;
+            const body = _.pick(reqBody, ['identityContract'])
+            const result = await createServiceInstance.deployProxy(body.identityContract);
+            res.send(result)
+        } catch (e) {
+            console.log(e)
+            res.status(400).send(e)
+        }
+
     }
 
-
-    let execute = async function(req, res) {
-        try{
+    const execute = async function (req, res) {
+        try {
             const body = _.pick(req.body, ['identityAddress', 'serviceContractAddress', 'reward', 'wei', 'data', 'signedDataHash']);
-            let executerService = new ExecuterService(body.identityAddress);
-            let result = await executerService.execute(body.serviceContractAddress, body.reward, body.wei, body.data, body.signedDataHash)
+
+            const result = await executeServiceInstance.execute(body.identityAddress, body.serviceContractAddress, body.reward, body.wei, body.data, body.signedDataHash)
             res.send(result);
-        } catch(e){
+        } catch (e) {
             res.status(400).send(e)
             console.log(e)
         }
     }
-    
+
     return {
-        createIDProxy: createIDProxy,
-        execute: execute
+        create,
+        deploy,
+        execute
     }
-    
+
 })()
 
 

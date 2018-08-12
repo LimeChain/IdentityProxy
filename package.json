@@ -5,7 +5,7 @@
   "main": "hashParams.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node relayer_api/relayer.js"
+    "start": "nodemon relayer_api/relayer.js"
   },
   "keywords": [],
   "author": "",
@@ -28,5 +28,8 @@
   "bugs": {
     "url": "https://github.com/LimeChain/IdentityProxy/issues"
   },
-  "homepage": "https://github.com/LimeChain/IdentityProxy#readme"
+  "homepage": "https://github.com/LimeChain/IdentityProxy#readme",
+  "devDependencies": {
+    "nodemon": "^1.18.3"
+  }
 }

@@ -1,5 +1,5 @@
 <script>
-        let serviceContractAbi = [
+  let serviceContractAbi = [
     {
       "constant": true,
       "inputs": [],
@@ -57,7 +57,7 @@
       "type": "function"
     }
   ]
-        let identityProxyAbi =[
+  let identityProxyAbi = [
     {
       "payable": true,
       "stateMutability": "payable",
@@ -131,130 +131,161 @@
       "type": "function"
     }
   ]
-        let Wallet = ethers.Wallet;
-        let utils = ethers.utils;
-        let url = {
-          create: '/create',
-          execute: 'execute'
-        };
+  let Wallet = ethers.Wallet;
+  let utils = ethers.utils;
+  let url = {
+    create: 'create',
+    deploy: 'deploy',
+    execute: 'execute'
+  };
 
-        let providers = ethers.providers;
-        let config = {
-          network: 'local',
-          infuraApiKey: 'XTIF9kIt1kgSOOKclKG0'
-        }
+  let providers = ethers.providers;
+  let config = {
+    network: 'local',
+    infuraApiKey: 'XTIF9kIt1kgSOOKclKG0'
+  }
 
-        function getNodeProvider() {
-	        if(config.network !== "local"){
-		          return new ethers.providers.InfuraProvider(config.network, config.infuraApikey);
-	        }
-	          return new ethers.providers.JsonRpcProvider("http://localhost:8545/");
-        }
-        
-        let provider = getNodeProvider();
+  function getNodeProvider() {
+    if (config.network !== "local") {
+      return new ethers.providers.InfuraProvider(config.network, config.infuraApikey);
+    }
+    return new ethers.providers.JsonRpcProvider("http://localhost:8545/");
+  }
 
-        let signerWallet;
-        let identityAddress;
-        let identityContract;
-        let serviceContractAddress = '0x1456d1d7BC82A64e389541f754351D85AE02a271'
-        
-        let donor = new ethers.Wallet('0x62ecd49c4ccb41a70ad46532aed63cf815de15864bc415c87d507afd6a5e8da2');
-        donor.provider = provider;
-        
-		    async function sign() {
-            signerWallet = Wallet.createRandom();
-            signerWallet.provider = provider;
-            localStorage.setItem('signerWallet', JSON.stringify(signerWallet))
-            let hashData = hash(signerWallet)
-            let result = await axios({
-                method: 'post',
-                url: url.create,
-                data: {
-                    addressHash: hashData.addressHash,
-                    addressSig: hashData.addressSig
-                }
-            })
+  let provider = getNodeProvider();
 
-            identityAddress = result.data.toString();
-    
-            let fund = await donor.send(identityAddress, 1000000000000000000);
-           
-        }
-        
+  let signerWallet;
+  let identityAddress;
+  let identityContract;
+  let serviceContractAddress = '0xd01e8b19b380C81e1256fDd479D9BA1dc2808Bf4'
 
-        function hash(signerWallet) {
-            const addressHash = utils.solidityKeccak256(['address'], [signerWallet.address]);
-            var addressHashBytes = ethers.utils.arrayify(addressHash);
-            const addressSig = signerWallet.signMessage(addressHashBytes);
-            return {addressHash, addressSig}
-        }
+  let donor = new ethers.Wallet('0x62ecd49c4ccb41a70ad46532aed63cf815de15864bc415c87d507afd6a5e8da2');
+  donor.provider = provider;
 
+  async function sign() {
+    signerWallet = Wallet.createRandom();
+    signerWallet.provider = provider;
+    localStorage.setItem('signerWallet', JSON.stringify(signerWallet))
+    let hashData = hash(signerWallet)
+    let createResult = await axios({
+      method: 'post',
+      url: url.create,
+      data: {
+        addressHash: hashData.addressHash,
+        addressSig: hashData.addressSig
+      }
+    })
 
-        async function buyService(){
-            
-            let slogan = document.getElementById("input_slogan")
-            let rewardInput = document.getElementById("input_reward")
-            let weiInput = document.getElementById("input_wei")
+    identityAddress = createResult.data.counterfactualIdentityContract;
 
-            let reward = rewardInput.value;
-            let wei = weiInput.value;
+    console.log(identityAddress);
 
-            let weiNum = Number(wei)
-            let rewardNum = Number(reward)
+    displayMessage(`Counterfactual identity reserved at ${identityAddress}`)
 
-            let serviceContract = new ethers.Contract(serviceContractAddress, serviceContractAbi, signerWallet);
+    let fund = await donor.send(identityAddress, 1000000000000000000);
 
-            let serviceDescriptor = (serviceContract.interface.functions.buy(slogan.value));
-	          let serviceData = serviceDescriptor.data;
+    await provider.waitForTransaction(fund.hash);
 
-            identityContract = new ethers.Contract(identityAddress, identityProxyAbi, provider);
-      
+    displayMessage(`Counterfactual identity reserved at ${identityAddress} funded. Deploying contract to be used`);
 
-            let nonce = await identityContract.getNonce();
-      
-            let serviceDataHash = utils.solidityKeccak256(['bytes', 'uint256', 'uint256', 'address','uint256'], [utils.arrayify(serviceData), reward, wei, serviceContractAddress, nonce.toString()]);
-	          
-            let hashData = ethers.utils.arrayify(serviceDataHash);
-	          let buyDataHashSignature = signerWallet.signMessage(hashData);
+    let deployResult = await axios({
+      method: 'post',
+      url: url.deploy,
+      data: {
+        identityContract: identityAddress
+      }
+    })
 
-            let result = await axios({
-                method: 'post',
-                url: url.execute,
-                data: {
-                    identityAddress: identityAddress,
-                    serviceContractAddress: serviceContractAddress,
-                    wei: weiNum,
-                    reward: rewardNum,
-                    data: serviceData,
-                    signedDataHash: buyDataHashSignature
-                }
-            });
-            
-            displayMessage('The transaction hash is: ' + result.data)
-        }
+    displayMessage('Identity deployment hash:' + deployResult.data.hash)
+
+    await provider.waitForTransaction(deployResult.data.hash);
+
+    const balance = await provider.getBalance(identityAddress);
+
+    displayMessage(`Counterfactual identity at ${identityAddress} deployed. Balance : ${balance}`);
+
+  }
 
 
-        function displayMessage(message){
-	        let el = document.getElementById("message");
-	        el.innerHTML = message;
-        }
+  function hash(signerWallet) {
+    const addressHash = utils.solidityKeccak256(['address'], [signerWallet.address]);
+    var addressHashBytes = ethers.utils.arrayify(addressHash);
+    const addressSig = signerWallet.signMessage(addressHashBytes);
+    return { addressHash, addressSig }
+  }
+
+
+  async function buyService() {
+
+    let slogan = document.getElementById("input_slogan")
+    let rewardInput = document.getElementById("input_reward")
+    let weiInput = document.getElementById("input_wei")
+
+    let reward = rewardInput.value;
+    let wei = weiInput.value;
+
+    let weiNum = Number(wei)
+    let rewardNum = Number(reward)
+
+    let serviceContract = new ethers.Contract(serviceContractAddress, serviceContractAbi, signerWallet);
+
+    let serviceDescriptor = (serviceContract.interface.functions.buy(slogan.value));
+    let serviceData = serviceDescriptor.data;
+
+    identityContract = new ethers.Contract(identityAddress, identityProxyAbi, provider);
+
+
+    let nonce = await identityContract.getNonce();
+
+    let serviceDataHash = utils.solidityKeccak256(['bytes', 'uint256', 'uint256', 'address', 'uint256'], [utils.arrayify(serviceData), reward, wei, serviceContractAddress, nonce.toString()]);
+
+    let hashData = ethers.utils.arrayify(serviceDataHash);
+    let buyDataHashSignature = signerWallet.signMessage(hashData);
+
+    let result = await axios({
+      method: 'post',
+      url: url.execute,
+      data: {
+        identityAddress: identityAddress,
+        serviceContractAddress: serviceContractAddress,
+        wei: weiNum,
+        reward: rewardNum,
+        data: serviceData,
+        signedDataHash: buyDataHashSignature
+      }
+    });
+
+    displayMessage('The execution transaction hash is: ' + result.data)
+
+    await provider.waitForTransaction(result.data);
+
+    displayMessage('Execution complete');
+  }
+
+
+  function displayMessage(message) {
+    let el = document.getElementById("message");
+    el.innerHTML = message;
+  }
 
 
 </script>
 
 
-	<h1> Universal ID </h1>
-	
-	<button type="button" style="margin-left: 60px" onclick="sign()">Sign</button><br>
-  <br>
+<h1> Universal ID </h1>
 
-  <input type="text" id="input_slogan" placeholder="Slogan"><br>
-  <input type="text" id="input_reward" placeholder="Reward"><br>
-  <input type="text" id="input_wei" placeholder="Wei"><br>
-  <br>
-  <button type="button" style="margin-left: 60px" onclick="buyService()">Buy</button><br>
-  <br>
-  <div id="message"> </div>
+<button type="button" style="margin-left: 60px" onclick="sign()">Sign</button>
+<br>
+<br>
 
-
-    
+<input type="text" id="input_slogan" placeholder="Slogan">
+<br>
+<input type="text" id="input_reward" placeholder="Reward">
+<br>
+<input type="text" id="input_wei" placeholder="Wei">
+<br>
+<br>
+<button type="button" style="margin-left: 60px" onclick="buyService()">Buy</button>
+<br>
+<br>
+<div id="message"> </div>
