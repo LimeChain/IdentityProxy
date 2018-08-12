@@ -1,16 +1,14 @@
 const _ = require('lodash');
-const CreateService = require('./../services/createService.js');
-const ExecuteService = require('./../services/executeService.js');
+const RelayerService = require('./../services/relayerService.js');
 
-const createServiceInstance = new CreateService();
-const executeServiceInstance = new ExecuteService();
+const relayerServiceInstance = new RelayerService();
 
 const ProxyController = (function () {
     const create = async function (req, res) {
         try {
             const reqBody = req.body;
             const body = _.pick(reqBody, ['addressHash', 'addressSig'])
-            const result = await createServiceInstance.createProxy(body.addressHash, body.addressSig);
+            const result = await relayerServiceInstance.createProxy(body.addressHash, body.addressSig);
             res.send(result)
         } catch (e) {
             console.log(e)
@@ -23,7 +21,7 @@ const ProxyController = (function () {
         try {
             const reqBody = req.body;
             const body = _.pick(reqBody, ['identityContract'])
-            const result = await createServiceInstance.deployProxy(body.identityContract);
+            const result = await relayerServiceInstance.deployProxy(body.identityContract);
             res.send(result)
         } catch (e) {
             console.log(e)
@@ -36,7 +34,7 @@ const ProxyController = (function () {
         try {
             const body = _.pick(req.body, ['identityAddress', 'serviceContractAddress', 'reward', 'wei', 'data', 'signedDataHash']);
 
-            const result = await executeServiceInstance.execute(body.identityAddress, body.serviceContractAddress, body.reward, body.wei, body.data, body.signedDataHash)
+            const result = await relayerServiceInstance.execute(body.identityAddress, body.serviceContractAddress, body.reward, body.wei, body.data, body.signedDataHash)
             res.send(result);
         } catch (e) {
             res.status(400).send(e)

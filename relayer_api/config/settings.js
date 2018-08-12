@@ -4,7 +4,7 @@ const settings = {
     },
     infuraApikey: "XTIF9kIt1kgSOOKclKG0",
     network: 'local',
-    implementationAddress: '0x40CEC19Aa9bb6181cE40148Cc0d863f5a9f7225c'
+    implementationAddress: '0x655341AabD39a5ee0939796dF610aD685a984C53'
 }
 
 module.exports = settings;
