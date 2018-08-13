@@ -12,6 +12,10 @@ class CounterfactualTransactionsService {
 	getData(identityContract) {
 		return this.counterFactualContracts[identityContract]
 	}
+
+	removeData(identityContract) {
+		delete this.counterFactualContracts[identityContract];
+	}
 }
 
 module.exports = CounterfactualTransactionsService;

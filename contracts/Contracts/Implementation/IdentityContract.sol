@@ -18,6 +18,7 @@ contract IdentityContract is IIdentityContract, SharedStorage {
 		bytes32 dataHash = keccak256(abi.encodePacked(data, relayerReward, value, target, nonce));
 		address signer = getSigner(dataHash, dataHashSignature);
 		require(signer == owner);
+		emit LogActionAuthorised(nonce, signer);
 		_;
 	}
 
@@ -39,6 +40,7 @@ contract IdentityContract is IIdentityContract, SharedStorage {
 		// solium-disable-next-line security/no-call-value
 		nonce++;
 		require(target.call.value(value)(data));
+		emit LogActionExecuted(nonce-1, target, relayerReward, value, data, dataHashSignature);
 		require(rewardMsgSender(relayerReward));
 		return true;
 	}
@@ -46,7 +48,15 @@ contract IdentityContract is IIdentityContract, SharedStorage {
 	function rewardMsgSender(uint256 reward) internal returns(bool) {
 		// Override this to make your reward logic work
 		msg.sender.transfer(reward);
+
+		if(nonce != 1) {
+			emit LogRewardsPaid(nonce-1, msg.sender, reward, deployer, 0x0);
+			return true;
+		}
+
+		deployer.transfer(10000);
+		emit LogRewardsPaid(nonce-1, msg.sender, reward, deployer, 10000);
 		return true;
 	}
-    
+
 }

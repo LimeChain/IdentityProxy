@@ -59,26 +59,112 @@
   ]
   let identityProxyAbi = [
     {
-      "payable": true,
-      "stateMutability": "payable",
-      "type": "fallback"
-    },
-    {
-      "constant": false,
+      "anonymous": false,
       "inputs": [
         {
-          "name": "addressHash",
-          "type": "bytes32"
+          "indexed": false,
+          "name": "nonce",
+          "type": "uint256"
         },
         {
-          "name": "addressSig",
+          "indexed": false,
+          "name": "signer",
+          "type": "address"
+        }
+      ],
+      "name": "LogActionAuthorised",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": false,
+          "name": "nonce",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "name": "target",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "name": "relayerReward",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "name": "value",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "name": "data",
+          "type": "bytes"
+        },
+        {
+          "indexed": false,
+          "name": "dataHashSignature",
           "type": "bytes"
         }
       ],
-      "name": "init",
-      "outputs": [],
+      "name": "LogActionExecuted",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": false,
+          "name": "nonce",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "name": "relayer",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "name": "rewardPaid",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "name": "deployer",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "name": "deployerRewardPaid",
+          "type": "uint256"
+        }
+      ],
+      "name": "LogRewardsPaid",
+      "type": "event"
+    },
+    {
+      "constant": true,
+      "inputs": [
+        {
+          "name": "raw",
+          "type": "bytes32"
+        },
+        {
+          "name": "sig",
+          "type": "bytes"
+        }
+      ],
+      "name": "getSigner",
+      "outputs": [
+        {
+          "name": "signer",
+          "type": "address"
+        }
+      ],
       "payable": false,
-      "stateMutability": "nonpayable",
+      "stateMutability": "view",
       "type": "function"
     },
     {
@@ -157,13 +243,14 @@
   let signerWallet;
   let identityAddress;
   let identityContract;
-  let serviceContractAddress = '0xc9707E1e496C12f1Fa83AFbbA8735DA697cdBf64'
+  let serviceContractAddress = '0x72E18a9812244f32aA1Bd9fB84979051DeDc8ce5'
 
   let donor = new ethers.Wallet('0x62ecd49c4ccb41a70ad46532aed63cf815de15864bc415c87d507afd6a5e8da2');
   donor.provider = provider;
 
   async function sign() {
     signerWallet = Wallet.createRandom();
+    console.log(signerWallet.address);
     signerWallet.provider = provider;
     localStorage.setItem('signerWallet', JSON.stringify(signerWallet))
     let hashData = hash(signerWallet)
@@ -176,7 +263,7 @@
       }
     })
 
-    identityAddress = createResult.data.counterfactualIdentityContract;
+    identityAddress = createResult.data.counterfactualContractAddress;
 
     console.log(identityAddress);
 
@@ -186,7 +273,24 @@
 
     await provider.waitForTransaction(fund.hash);
 
-    displayMessage(`Counterfactual identity reserved at ${identityAddress} funded. Deploying contract to be used`);
+    displayMessage(`Counterfactual identity reserved at ${identityAddress} funded.`);
+
+  }
+
+
+  function hash(signerWallet) {
+    const addressHash = utils.solidityKeccak256(['address'], [signerWallet.address]);
+    var addressHashBytes = ethers.utils.arrayify(addressHash);
+    const addressSig = signerWallet.signMessage(addressHashBytes);
+    return { addressHash, addressSig }
+  }
+
+
+  async function buyService() {
+
+
+    // TODO remove deployment from here
+    /*displayMessage(`Deploying ${identityAddress}`);
 
     let deployResult = await axios({
       method: 'post',
@@ -202,20 +306,11 @@
 
     const balance = await provider.getBalance(identityAddress);
 
-    displayMessage(`Counterfactual identity at ${identityAddress} deployed. Balance : ${balance}`);
+    displayMessage(`Counterfactual identity at ${identityAddress} deployed. Balance : ${balance}`); */
 
-  }
+    const bc = await signerWallet.provider.getCode(identityAddress)
 
-
-  function hash(signerWallet) {
-    const addressHash = utils.solidityKeccak256(['address'], [signerWallet.address]);
-    var addressHashBytes = ethers.utils.arrayify(addressHash);
-    const addressSig = signerWallet.signMessage(addressHashBytes);
-    return { addressHash, addressSig }
-  }
-
-
-  async function buyService() {
+    const contractDeployed = (bc !== '0x00');
 
     let slogan = document.getElementById("input_slogan")
     let rewardInput = document.getElementById("input_reward")
@@ -232,10 +327,13 @@
     let serviceDescriptor = (serviceContract.interface.functions.buy(slogan.value));
     let serviceData = serviceDescriptor.data;
 
+
+    let nonce = utils.bigNumberify(0);
     identityContract = new ethers.Contract(identityAddress, identityProxyAbi, provider);
 
-
-    let nonce = await identityContract.getNonce();
+    if (contractDeployed) {
+      nonce = await identityContract.getNonce();
+    }
 
     let serviceDataHash = utils.solidityKeccak256(['bytes', 'uint256', 'uint256', 'address', 'uint256'], [utils.arrayify(serviceData), reward, wei, serviceContractAddress, nonce.toString()]);
 
@@ -257,9 +355,32 @@
 
     displayMessage('The execution transaction hash is: ' + result.data)
 
-    await provider.waitForTransaction(result.data);
+    const txRes = await provider.waitForTransaction(result.data);
 
     displayMessage('Execution complete');
+
+    console.log(txRes);
+
+    const txReceipt = await provider.getTransactionReceipt(result.data);
+
+    console.log(txReceipt);
+
+    console.log(identityContract.interface);
+
+    const logActionAuthorised = identityContract.interface.events.LogActionAuthorised;
+    const logActionExecuted = identityContract.interface.events.LogActionExecuted;
+    const logRewardsPaid = identityContract.interface.events.LogRewardsPaid;
+
+    const l1 = logActionAuthorised.parse(txReceipt.logs[0].data);
+    console.log(l1.nonce.toString(), l1.signer);
+
+    const l2 = logActionExecuted.parse(txReceipt.logs[1].data);
+
+    console.log(l2.target, l2.value);
+
+    const l3 = logRewardsPaid.parse(txReceipt.logs[2].data);
+
+    console.log(l3.nonce, l3.relayer, l3.rewardPaid.toString(), l3.deployer, l3.deployerRewardPaid.toString());
   }
 
 

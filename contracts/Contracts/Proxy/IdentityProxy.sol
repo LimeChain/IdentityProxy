@@ -14,19 +14,17 @@ contract IdentityProxy is SharedStorage {
      * @dev sets the owner of this identity proxy to the person that has signed the data
      * 
      * @param masterContract - address of the master implementation
-     * @param relayer - address of the relayer that has signed this counterfactual contract
+     * @param _deployer - address of the relayer that has signed this counterfactual contract
      * @param signerAddressHash - keccak256 of the address of the signer
      * @param signerAddressSignature - signed signerAddressHash by the signer
      */
-    constructor (address masterContract, address relayer, bytes32 signerAddressHash, bytes signerAddressSignature) public {
+    constructor (address masterContract, address _deployer, bytes32 signerAddressHash, bytes signerAddressSignature) public {
         contractImplementation = masterContract;
 
         owner = IIdentityContract(contractImplementation).getSigner(signerAddressHash, signerAddressSignature);
 		bytes32 signerHash = keccak256(abi.encodePacked(owner));
 		require(signerHash == signerAddressHash);
-
-        relayer.transfer(address(this).balance/2);
-        // TODO change the renumeration logic
+        deployer = _deployer;
     }
     
     function delegatedFwd(address _dst, bytes _calldata) internal {

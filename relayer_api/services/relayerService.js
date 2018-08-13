@@ -1,4 +1,5 @@
 const IdentityProxy = require('./../../build/IdentityProxy.json');
+const IIdentityContract = require('./../../build/IIdentityContract.json');
 const ethers = require('ethers');
 const Wallet = ethers.Wallet;
 const utils = ethers.utils;
@@ -13,6 +14,10 @@ class RelayerService {
 
 	constructor() {
 		connection.wallet = connection.wallet;
+
+		this.deploymentGasNeeded = utils.bigNumberify(settings.deploymentGas);
+		this.deploymentGasPrice = utils.bigNumberify(settings.deploymentGasPrice);
+		this.deploymentValue = this.deploymentGasNeeded.mul(this.deploymentGasPrice);
 	}
 
 	async createProxy(addressHash, addressSig) {
@@ -36,8 +41,8 @@ class RelayerService {
 	}
 
 	_setupDeployTransaction(deployTransaction) {
-		deployTransaction.gasLimit = 566700;
-		deployTransaction.gasPrice = 100000000000;
+		deployTransaction.gasLimit = this.deploymentGasNeeded;
+		deployTransaction.gasPrice = this.deploymentGasPrice;
 		return deployTransaction;
 	}
 
@@ -85,19 +90,34 @@ class RelayerService {
 		const from = fullCounterfactualData.counterfactualDeploymentPayer;
 		// TODO check funds from deployer
 
-		const fundTransaction = await connection.wallet.send(from, utils.bigNumberify(566700).mul(100000000000)) // TODO change value passed
+		const existingValue = await connection.provider.getBalance(from);
+
+		const valueToBeSent = this.deploymentValue.sub(existingValue);
+
+		const fundTransaction = await connection.wallet.send(from, valueToBeSent);
 		await connection.provider.waitForTransaction(fundTransaction.hash);
 
 		const deployTx = await connection.provider.sendTransaction(fullCounterfactualData.counterfactualTransaction);
+
+		transactionsStorage.removeData(counterfactualContractAddress);
 		return {
 			hash: deployTx
 		};
 	}
 
 	async execute(identityAddress, serviceContractAddress, reward, wei, data, signedDataHash) {
-		// TODO simulate the transaction and check result
-		// TODO estimate transaction cost before executing and work out the reward
 		// TODO rework the numbers into big numbers
+
+		const counterfactualData = transactionsStorage.getData(identityAddress);
+
+		if (counterfactualData) {
+			// TODO figure out a way not to be drained by failing of the next TX
+			const deployTx = await this.deployProxy(identityAddress);
+			await connection.provider.waitForTransaction(deployTx.hash);
+		}
+
+		// TODO estimate transaction cost before executing and work out the reward
+		// TODO simulate the transaction and check result
 		const identityContract = new ethers.Contract(identityAddress, IIdentityContract.abi, connection.wallet);
 
 		const transaction = await identityContract.execute(serviceContractAddress, `${reward}`, `${wei}`, data, signedDataHash);
