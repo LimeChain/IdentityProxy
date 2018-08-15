@@ -327,7 +327,6 @@
     let serviceDescriptor = (serviceContract.interface.functions.buy(slogan.value));
     let serviceData = serviceDescriptor.data;
 
-
     let nonce = utils.bigNumberify(0);
     identityContract = new ethers.Contract(identityAddress, identityProxyAbi, provider);
 
