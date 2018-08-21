@@ -17,19 +17,6 @@ const ProxyController = (function () {
 
     }
 
-    const deploy = async function (req, res) {
-        try {
-            const reqBody = req.body;
-            const body = _.pick(reqBody, ['identityContract'])
-            const result = await relayerServiceInstance.deployProxy(body.identityContract);
-            res.send(result)
-        } catch (e) {
-            console.log(e)
-            res.status(400).send(e)
-        }
-
-    }
-
     const execute = async function (req, res) {
         try {
             const body = _.pick(req.body, ['identityAddress', 'serviceContractAddress', 'reward', 'wei', 'data', 'signedDataHash']);
@@ -44,7 +31,6 @@ const ProxyController = (function () {
 
     return {
         create,
-        deploy,
         execute
     }
 

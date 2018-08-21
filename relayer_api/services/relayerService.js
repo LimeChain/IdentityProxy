@@ -29,7 +29,7 @@ class RelayerService {
 
 		const counterfactualTransaction = this._counterfactualizeSignedTransaction(signedTransaction);
 
-		const fullCounterfactualData = this._extractCounterfactualParams(counterfactualTransaction);
+		const fullCounterfactualData = await this._extractCounterfactualParams(counterfactualTransaction);
 
 		transactionsStorage.upsertData(fullCounterfactualData.counterfactualContractAddress, fullCounterfactualData);
 
@@ -61,19 +61,27 @@ class RelayerService {
 		return `${signedTransNoRSV}${counterfactualMagic}${randomS}`;
 	}
 
-	_extractCounterfactualParams(counterfactualTransaction) {
+	async _extractCounterfactualParams(counterfactualTransaction) {
 		const parsedTrans = Wallet.parseTransaction(counterfactualTransaction);
-
+		
 		const counterfactualDeploymentPayer = parsedTrans.from;
+		
 
 		// TODO check number of transactions of getTransactionCount for nonce
+		let nonce = await connection.provider.getTransactionCount(counterfactualDeploymentPayer);
+
 		const transaction = {
 			from: counterfactualDeploymentPayer,
-			nonce: 0
+			nonce: nonce
 		};
 
-		const counterfactualContractAddress = utils.getContractAddress(transaction)
+		const counterfactualContractAddress = utils.getContractAddress(transaction);
+
 		// TODO check funds of counterfactual address
+		let counterfactualBalance = await connection.provider.getBalance(counterfactualContractAddress);
+		if(utils.bigNumberify(counterfactualBalance).gt(0)){
+			throw "Contract with such address has already been used"
+		}
 
 		return {
 			counterfactualContractAddress,
@@ -85,28 +93,35 @@ class RelayerService {
 	async deployProxy(counterfactualContractAddress) {
 		const fullCounterfactualData = transactionsStorage.getData(counterfactualContractAddress);
 		// TODO check Tx count
+		
 		// TODO check funds of counterfactual address
-
+		const counterfactualBalance = await connection.provider.getBalance(counterfactualContractAddress);
+		
+		if(utils.bigNumberify(counterfactualBalance).eq(0)){
+			throw "Counterfactual contract should have ethers"
+		}
 		const from = fullCounterfactualData.counterfactualDeploymentPayer;
-		// TODO check funds from deployer
-
+	
 		const existingValue = await connection.provider.getBalance(from);
 
 		const valueToBeSent = this.deploymentValue.sub(existingValue);
 
 		const fundTransaction = await connection.wallet.send(from, valueToBeSent);
 		await connection.provider.waitForTransaction(fundTransaction.hash);
-
+		
+	
 		const deployTx = await connection.provider.sendTransaction(fullCounterfactualData.counterfactualTransaction);
-
 		transactionsStorage.removeData(counterfactualContractAddress);
 		return {
 			hash: deployTx
 		};
+	
 	}
 
-	async execute(identityAddress, serviceContractAddress, reward, wei, data, signedDataHash) {
+	async execute(identityAddress, serviceContractAddress, _reward, _wei, data, signedDataHash) {
 		// TODO rework the numbers into big numbers
+		let reward = utils.bigNumberify(_reward);
+		let wei = utils.bigNumberify(_wei);
 
 		const counterfactualData = transactionsStorage.getData(identityAddress);
 
@@ -116,11 +131,16 @@ class RelayerService {
 			await connection.provider.waitForTransaction(deployTx.hash);
 		}
 
-		// TODO estimate transaction cost before executing and work out the reward
 		// TODO simulate the transaction and check result
 		const identityContract = new ethers.Contract(identityAddress, IIdentityContract.abi, connection.wallet);
 
-		const transaction = await identityContract.execute(serviceContractAddress, `${reward}`, `${wei}`, data, signedDataHash);
+		// TODO estimate transaction cost before executing and work out the reward
+		let estimateGas = await identityContract.estimate.execute(serviceContractAddress, reward, wei, data, signedDataHash);
+		if(utils.bigNumberify(estimateGas).gt(reward)){
+			throw "The reward to the relayer should be bigger than transaction costs"
+		}
+
+		const transaction = await identityContract.execute(serviceContractAddress, reward, wei, data, signedDataHash);
 
 		return transaction.hash
 	}

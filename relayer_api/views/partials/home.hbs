@@ -243,14 +243,14 @@
   let signerWallet;
   let identityAddress;
   let identityContract;
-  let serviceContractAddress = '0x72E18a9812244f32aA1Bd9fB84979051DeDc8ce5'
+  let serviceContractAddress = '0xd3691920F8a81D5Cf9f05985F2Ec52dAC40C9C8e'
 
   let donor = new ethers.Wallet('0x62ecd49c4ccb41a70ad46532aed63cf815de15864bc415c87d507afd6a5e8da2');
   donor.provider = provider;
 
   async function sign() {
     signerWallet = Wallet.createRandom();
-    console.log(signerWallet.address);
+    console.log("SignerWallet: ", signerWallet.address);
     signerWallet.provider = provider;
     localStorage.setItem('signerWallet', JSON.stringify(signerWallet))
     let hashData = hash(signerWallet)
@@ -265,7 +265,7 @@
 
     identityAddress = createResult.data.counterfactualContractAddress;
 
-    console.log(identityAddress);
+    console.log("ID Address: ", identityAddress);
 
     displayMessage(`Counterfactual identity reserved at ${identityAddress}`)
 
@@ -287,26 +287,6 @@
 
 
   async function buyService() {
-
-
-    // TODO remove deployment from here
-    /*displayMessage(`Deploying ${identityAddress}`);
-
-    let deployResult = await axios({
-      method: 'post',
-      url: url.deploy,
-      data: {
-        identityContract: identityAddress
-      }
-    })
-
-    displayMessage('Identity deployment hash:' + deployResult.data.hash)
-
-    await provider.waitForTransaction(deployResult.data.hash);
-
-    const balance = await provider.getBalance(identityAddress);
-
-    displayMessage(`Counterfactual identity at ${identityAddress} deployed. Balance : ${balance}`); */
 
     const bc = await signerWallet.provider.getCode(identityAddress)
 
