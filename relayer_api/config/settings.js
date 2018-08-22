@@ -4,8 +4,8 @@ const settings = {
     },
     infuraApikey: "XTIF9kIt1kgSOOKclKG0",
     network: 'local',
-    implementationAddress: '0xE9d45870c6C3446A87Ac4091c110E5bbed2b3468',
-    deploymentGas: 300000,
+    implementationAddress: '0x92c04A7200AC1d15138c5e7603207329F0d0803C',
+    deploymentGas: 4500000,
     deploymentGasPrice: 100000000000
 }
 
