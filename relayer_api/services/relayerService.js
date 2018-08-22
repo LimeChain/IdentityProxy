@@ -66,8 +66,6 @@ class RelayerService {
 		
 		const counterfactualDeploymentPayer = parsedTrans.from;
 		
-
-		// TODO check number of transactions of getTransactionCount for nonce
 		let nonce = await connection.provider.getTransactionCount(counterfactualDeploymentPayer);
 
 		const transaction = {
@@ -77,10 +75,9 @@ class RelayerService {
 
 		const counterfactualContractAddress = utils.getContractAddress(transaction);
 
-		// TODO check funds of counterfactual address
 		let counterfactualBalance = await connection.provider.getBalance(counterfactualContractAddress);
 		if(utils.bigNumberify(counterfactualBalance).gt(0)){
-			throw "Contract with such address has already been used"
+			throw new Error ("Contract with such address has already been used")
 		}
 
 		return {
@@ -94,11 +91,10 @@ class RelayerService {
 		const fullCounterfactualData = transactionsStorage.getData(counterfactualContractAddress);
 		// TODO check Tx count
 		
-		// TODO check funds of counterfactual address
 		const counterfactualBalance = await connection.provider.getBalance(counterfactualContractAddress);
 		
 		if(utils.bigNumberify(counterfactualBalance).eq(0)){
-			throw "Counterfactual contract should have ethers"
+			throw new Error("Counterfactual contract should have ethers")
 		}
 		const from = fullCounterfactualData.counterfactualDeploymentPayer;
 	
@@ -119,7 +115,6 @@ class RelayerService {
 	}
 
 	async execute(identityAddress, serviceContractAddress, _reward, _wei, data, signedDataHash) {
-		// TODO rework the numbers into big numbers
 		let reward = utils.bigNumberify(_reward);
 		let wei = utils.bigNumberify(_wei);
 
@@ -131,13 +126,11 @@ class RelayerService {
 			await connection.provider.waitForTransaction(deployTx.hash);
 		}
 
-		// TODO simulate the transaction and check result
 		const identityContract = new ethers.Contract(identityAddress, IIdentityContract.abi, connection.wallet);
 
-		// TODO estimate transaction cost before executing and work out the reward
 		let estimateGas = await identityContract.estimate.execute(serviceContractAddress, reward, wei, data, signedDataHash);
 		if(utils.bigNumberify(estimateGas).gt(reward)){
-			throw "The reward to the relayer should be bigger than transaction costs"
+			throw new Error("The reward to the relayer should be bigger than transaction costs")
 		}
 
 		const transaction = await identityContract.execute(serviceContractAddress, reward, wei, data, signedDataHash);
