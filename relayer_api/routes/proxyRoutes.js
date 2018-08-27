@@ -7,4 +7,11 @@ module.exports = function (app) {
 
     app.route('/execute')
         .post(proxyController.execute);
+
+    app.route('/authorize')
+        .post(proxyController.authorize);
+
+    app.route('/remove_authorization')
+        .post(proxyController.removeAuthorization);
+
 }

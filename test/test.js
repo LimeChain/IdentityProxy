@@ -171,12 +171,13 @@ function hash (wallet) {
             let buyDataHashSignature = signerWallet.signMessage(hashData);
 
             let transaction = await identityContractInstance.execute(billboardService.contractAddress, reward, value, serviceData, buyDataHashSignature);
+            const txReceipt = await settings.provider.getTransactionReceipt(transaction.hash);
         
             let event = identityContractInstance.interface.events.LogActionAuthorised;
-            await settings.provider.on(event.topics, function(log) {
-                const logData = event.parse(log.topics, log.data)
-                assert.equal(logData.signer, signerWallet.address)
-            });            
+            const log = event.parse(txReceipt.logs[0].data)
+            assert.equal(log.signer.toLowerCase(), signerWallet.address.toLowerCase()) 
+
+                    
         })
 
         it('should emit action executed', async function() {
@@ -196,13 +197,14 @@ function hash (wallet) {
             let buyDataHashSignature = signerWallet.signMessage(hashData);
 
             let transaction = await identityContractInstance.execute(billboardService.contractAddress, reward, value, serviceData, buyDataHashSignature);
-        
+            const txReceipt = await settings.provider.getTransactionReceipt(transaction.hash);
+
             let event = identityContractInstance.interface.events.LogActionExecuted;
-            await settings.provider.once(event.topics, function(log) {
-                const logData = event.parse(log.topics, log.data)
-                assert.equal(logData.target, billboardService.contractAddress)
-            });            
-        })
+
+            const log = event.parse(txReceipt.logs[1].data)
+            assert.equal(log.target, billboardService.contractAddress)
+           
+        })           
 
         it('should emit reward payed', async function() {
             let reward = 100;
@@ -221,13 +223,13 @@ function hash (wallet) {
             let buyDataHashSignature = signerWallet.signMessage(hashData);
 
             let transaction = await identityContractInstance.execute(billboardService.contractAddress, reward, value, serviceData, buyDataHashSignature);
-        
+            const txReceipt = await settings.provider.getTransactionReceipt(transaction.hash);
+
             let event = identityContractInstance.interface.events.LogRewardsPaid;
-            await settings.provider.on(event.topics, function(log) {
-                const logData = event.parse(log.topics, log.data)
-                let relayerReward = logData.rewardPaid.toNumber();
-                assert.equal(relayerReward, reward)
-            });           
+
+            const log = event.parse(txReceipt.logs[2].data)
+            assert.equal(log.rewardPaid, reward) 
+                 
         })
 
     })
@@ -316,14 +318,14 @@ function hash (wallet) {
 
             identityContractInstance = new ethers.Contract(identityContractInstance.contractAddress, IIdentityContract.abi, signerWallet)
 
-            await identityContractInstance.addSigner(newSigner, hashData.addressHash, hashData.addressSig)
+            let transaction = await identityContractInstance.addSigner(newSigner, hashData.addressHash, hashData.addressSig)
+            let txReceipt = await settings.provider.getTransactionReceipt(transaction.hash);
         
             let event = identityContractInstance.interface.events.LogSignerAdded;
-            await settings.provider.on(event.topics, function(log) {
-                const logData = event.parse(log.topics, log.data)
-                assert.equal(logData.addedSigner.toLowerCase(), newSigner)
-            });           
+            let log = event.parse(txReceipt.logs[0].data)
+            assert.equal(log.addedSigner.toLowerCase(), newSigner)        
         })
+
 
         it('should emit removed signer', async function() {
             let newSigner = '0x56a32fff5e5a8b40d6a21538579fb8922df5258c'
@@ -333,13 +335,14 @@ function hash (wallet) {
             identityContractInstance = new ethers.Contract(identityContractInstance.contractAddress, IIdentityContract.abi, signerWallet)
 
             await identityContractInstance.addSigner(newSigner, hashData.addressHash, hashData.addressSig)
-            await identityContractInstance.removeSigner(newSigner, hashData.addressHash, hashData.addressSig)
+            let transaction = await identityContractInstance.removeSigner(newSigner, hashData.addressHash, hashData.addressSig);
+            let txReceipt = await settings.provider.getTransactionReceipt(transaction.hash);
+        
         
             let event = identityContractInstance.interface.events.LogSignerRemoved;
-            await settings.provider.on(event.topics, function(log) {
-                const logData = event.parse(log.topics, log.data)
-                assert.equal(logData.removedSigner.toLowerCase(), newSigner)
-            });           
+            let log = event.parse(txReceipt.logs[0].data)
+            assert.equal(log.removedSigner.toLowerCase(), newSigner)  
+                    
         })
 
     })

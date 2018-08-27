@@ -138,6 +138,18 @@ class RelayerService {
 		return transaction.hash
 	}
 
+	async authorizeSigner(identityAddress, newSigner, addressHash, addressSig) {
+		const identityContract = new ethers.Contract(identityAddress, IIdentityContract.abi, connection.wallet);
+		const transaction = await identityContract.addSigner(newSigner, addressHash, addressSig);
+		return transaction.hash
+	}
+
+	async removeAuthorizedSigner(identityAddress, signerToRemove, addressHash, addressSig){
+		const identityContract = new ethers.Contract(identityAddress, IIdentityContract.abi, connection.wallet);
+		const transaction = await identityContract.removeSigner(signerToRemove, addressHash, addressSig);
+		return transaction.hash
+	}
+
 }
 
 module.exports = RelayerService;
