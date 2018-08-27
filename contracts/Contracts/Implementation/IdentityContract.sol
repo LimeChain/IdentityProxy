@@ -17,9 +17,30 @@ contract IdentityContract is IIdentityContract, SharedStorage {
 	modifier onlyValidSignature(uint256 relayerReward, address target, uint256 value, bytes data, bytes dataHashSignature) {
 		bytes32 dataHash = keccak256(abi.encodePacked(data, relayerReward, value, target, nonce));
 		address signer = getSigner(dataHash, dataHashSignature);
-		require(signer == owner);
+		require(isSigner[signer]);
 		emit LogActionAuthorised(nonce, signer);
 		_;
+	}
+
+	modifier onlySigner(bytes32 addressHash, bytes addressSig){
+		address signer = getSigner(addressHash, addressSig);
+		require(isSigner[signer]);
+		_;
+	}
+
+	function addSigner(address _signer, bytes32 addressHash, bytes addressSig) public onlySigner(addressHash, addressSig){
+		require(_signer != address(0));
+		isSigner[_signer] = true;
+		emit LogSignerAdded(_signer);
+	}
+
+	function removeSigner(address _signer, bytes32 addressHash, bytes addressSig) public onlySigner(addressHash, addressSig){
+		isSigner[_signer] = false;
+		emit LogSignerRemoved(_signer);
+	}
+
+	function checkSigner(address _signer) public view returns(bool){
+		return isSigner[_signer];
 	}
 
 	function getNonce() public view returns(uint256) {
