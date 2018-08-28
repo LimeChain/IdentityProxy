@@ -22,19 +22,19 @@ contract IdentityContract is IIdentityContract, SharedStorage {
 		_;
 	}
 
-	modifier onlySigner(bytes32 addressHash, bytes addressSig){
+	modifier onlyMasterSigner(bytes32 addressHash, bytes addressSig){
 		address signer = getSigner(addressHash, addressSig);
-		require(isSigner[signer]);
+		require(masterSigner == signer);
 		_;
 	}
 
-	function addSigner(address _signer, bytes32 addressHash, bytes addressSig) public onlySigner(addressHash, addressSig){
+	function addSigner(address _signer, bytes32 addressHash, bytes addressSig) public onlyMasterSigner(addressHash, addressSig){
 		require(_signer != address(0));
 		isSigner[_signer] = true;
 		emit LogSignerAdded(_signer);
 	}
 
-	function removeSigner(address _signer, bytes32 addressHash, bytes addressSig) public onlySigner(addressHash, addressSig){
+	function removeSigner(address _signer, bytes32 addressHash, bytes addressSig) public onlyMasterSigner(addressHash, addressSig){
 		isSigner[_signer] = false;
 		emit LogSignerRemoved(_signer);
 	}

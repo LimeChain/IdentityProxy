@@ -119,7 +119,6 @@ class RelayerService {
 		let wei = utils.bigNumberify(_wei);
 
 		const counterfactualData = transactionsStorage.getData(identityAddress);
-
 		if (counterfactualData) {
 			// TODO figure out a way not to be drained by failing of the next TX
 			const deployTx = await this.deployProxy(identityAddress);
@@ -127,12 +126,12 @@ class RelayerService {
 		}
 
 		const identityContract = new ethers.Contract(identityAddress, IIdentityContract.abi, connection.wallet);
-
+		
 		let estimateGas = await identityContract.estimate.execute(serviceContractAddress, reward, wei, data, signedDataHash);
+
 		if(utils.bigNumberify(estimateGas).gt(reward)){
 			throw new Error("The reward to the relayer should be bigger than transaction costs")
 		}
-
 		const transaction = await identityContract.execute(serviceContractAddress, reward, wei, data, signedDataHash);
 
 		return transaction.hash

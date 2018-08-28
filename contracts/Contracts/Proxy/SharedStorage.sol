@@ -4,8 +4,6 @@ contract SharedStorage {
     address public contractImplementation;
     address public deployer;
 
+    address public masterSigner;
     mapping (address => bool) isSigner;
-
-    // address public owner;
-
 }

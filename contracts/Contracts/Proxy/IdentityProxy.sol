@@ -24,7 +24,8 @@ contract IdentityProxy is SharedStorage {
         address signer = IIdentityContract(contractImplementation).getSigner(signerAddressHash, signerAddressSignature);
 		bytes32 signerHash = keccak256(abi.encodePacked(signer));
 		require(signerHash == signerAddressHash);
-        isSigner[signer] = true;
+        masterSigner = signer;
+        isSigner[masterSigner] = true;
         deployer = _deployer;
     }
     

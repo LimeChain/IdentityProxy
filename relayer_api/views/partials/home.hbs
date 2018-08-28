@@ -328,20 +328,20 @@
 
   let provider = getNodeProvider();
 
-  let signerWallet;
+  let masterSignerWallet;
   let identityAddress;
   let identityContract;
-  let serviceContractAddress = '0xE4FEd0Cc7f52032482f0543Aa0BDE2c0B1cdA2b3'
+  let serviceContractAddress = '0xfb7C807190C4A6f39ec0Ac77f7f505F6987692aB'
 
   let donor = new ethers.Wallet('0x62ecd49c4ccb41a70ad46532aed63cf815de15864bc415c87d507afd6a5e8da2');
   donor.provider = provider;
 
   async function sign() {
-    signerWallet = Wallet.createRandom();
-    signerWallet.provider = provider;
-    console.log("SignerWallet: ", signerWallet.address);
-    localStorage.setItem('signerWallets', JSON.stringify(signerWallet))
-    let hashData = hash(signerWallet)
+    masterSignerWallet = Wallet.createRandom();
+    masterSignerWallet.provider = provider;
+    console.log("masterSignerWallet: ", masterSignerWallet.address);
+    localStorage.setItem('masterSignerWallet', JSON.stringify(masterSignerWallet))
+    let hashData = hash(masterSignerWallet)
     let createResult = await axios({
       method: 'post',
       url: url.create,
@@ -366,16 +366,16 @@
   }
 
 
-  function hash(signerWallet) {
-    const addressHash = utils.solidityKeccak256(['address'], [signerWallet.address]);
+  function hash(wallet) {
+    const addressHash = utils.solidityKeccak256(['address'], [wallet.address]);
     var addressHashBytes = ethers.utils.arrayify(addressHash);
-    const addressSig = signerWallet.signMessage(addressHashBytes);
+    const addressSig = wallet.signMessage(addressHashBytes);
     return { addressHash, addressSig }
   }
 
   async function buyService() {
 
-    const bc = await signerWallet.provider.getCode(identityAddress)
+    const bc = await masterSignerWallet.provider.getCode(identityAddress)
 
     const contractDeployed = (bc !== '0x00');
 
@@ -389,7 +389,7 @@
     let weiNum = Number(wei)
     let rewardNum = Number(reward)
 
-    let serviceContract = new ethers.Contract(serviceContractAddress, serviceContractAbi, signerWallet);
+    let serviceContract = new ethers.Contract(serviceContractAddress, serviceContractAbi, masterSignerWallet);
 
     let serviceDescriptor = (serviceContract.interface.functions.buy(slogan.value));
     let serviceData = serviceDescriptor.data;
@@ -404,7 +404,7 @@
     let serviceDataHash = utils.solidityKeccak256(['bytes', 'uint256', 'uint256', 'address', 'uint256'], [utils.arrayify(serviceData), reward, wei, serviceContractAddress, nonce.toString()]);
 
     let hashData = ethers.utils.arrayify(serviceDataHash);
-    let buyDataHashSignature = signerWallet.signMessage(hashData);
+    let buyDataHashSignature = masterSignerWallet.signMessage(hashData);
 
     let result = await axios({
       method: 'post',
@@ -423,7 +423,7 @@
 
     const txRes = await provider.waitForTransaction(result.data);
 
-    displayMessage('Execution complete');
+    displayMessage('Execution complete.');
 
     console.log(txRes);
 
@@ -454,8 +454,8 @@
 
     let newSignerWallet = Wallet.createRandom();
     newSignerWallet.provider = provider;
-    console.log('NewSignerWallet: ', newSignerWallet.address)
-    let hashData = hash(signerWallet)
+    console.log('NewSignerAddres: ', newSignerWallet.address)
+    let hashData = hash(masterSignerWallet)
     let authorizeResult = await axios({
       method: 'post',
       url: url.authorize,
@@ -467,19 +467,19 @@
       }
     })
 
-    displayMessage("Authorization successfull")
+    displayMessage("Authorization successfull.")
 
     const txReceipt = await provider.getTransactionReceipt(authorizeResult.data);
     const logSignerAdded = identityContract.interface.events.LogSignerAdded;
     const log = logSignerAdded.parse(txReceipt.logs[0].data)
-    console.log(log.addedSigner + " was added as Signer")
+    console.log(log.addedSigner + " was added as Signer.")
   }
 
-  async function RemoveAuthorization() {
+  async function removeAuthorization() {
     identityContract = new ethers.Contract(identityAddress, identityProxyAbi, provider);
 
     let signerToRemove = document.getElementById("remove_signer")
-    let hashData = hash(signerWallet)
+    let hashData = hash(masterSignerWallet)
     let result = await axios({
       method: 'post',
       url: url.remove_authorization,
@@ -491,12 +491,12 @@
       }
     })
 
-    displayMessage("Authorization successfully removed")
+    displayMessage("Authorization successfully removed.")
 
     const txReceipt = await provider.getTransactionReceipt(result.data);
     const LogSignerRemoved = identityContract.interface.events.LogSignerRemoved;
     const log = LogSignerRemoved.parse(txReceipt.logs[0].data)
-    console.log(log.removedSigner + " was removed as signer")
+    console.log(log.removedSigner + " was removed as signer.")
   }
 
 
@@ -534,7 +534,7 @@
 <input type="text" style="width: 180px" id="remove_signer" placeholder="Signer address to be removed">
 <br>
 <br>
-<button type="button"style="margin-left: 40px" onclick="RemoveAuthorization()">RemoveAuthorization</button>
+<button type="button"style="margin-left: 40px" onclick="removeAuthorization()">RemoveAuthorization</button>
 <br>
 <br>
 <div id="message"> </div>
