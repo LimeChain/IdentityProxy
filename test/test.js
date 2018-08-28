@@ -29,7 +29,7 @@ function hash (wallet) {
     const addressHashBytes = ethers.utils.arrayify(addressHash);
     const addressSig = wallet.signMessage(addressHashBytes);
     return { addressHash, addressSig }
-  }
+  } 
 
     describe('create identity', () => {
         let deployer;
