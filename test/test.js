@@ -20,12 +20,22 @@ let identityAddress;
 
 let deployerWallet = new ethers.Wallet('0x7ab741b57e8d94dd7e1a29055646bafde7010f38a900f55bbd7647880faa6ee8');
 deployerWallet.provider = settings.provider;
-let signerWallet = new ethers.Wallet('0x2030b463177db2da82908ef90fa55ddfcef56e8183caf60db464bc398e736e6f')
-signerWallet.provider = settings.provider;
-let deployer = new etherlime.EtherlimeGanacheDeployer();
+let masterSignerWallet = new ethers.Wallet('0x2030b463177db2da82908ef90fa55ddfcef56e8183caf60db464bc398e736e6f')
+masterSignerWallet.provider = settings.provider;
+let orverrideOptions = {gasLimit: 4700000};
+
+function hash (wallet) {
+    const addressHash = utils.solidityKeccak256(['address'], [wallet.address]);
+    const addressHashBytes = ethers.utils.arrayify(addressHash);
+    const addressSig = wallet.signMessage(addressHashBytes);
+    return { addressHash, addressSig }
+  } 
 
     describe('create identity', () => {
+        let deployer;
         beforeEach(async function() {
+            deployer = new etherlime.EtherlimeGanacheDeployer(accounts[0].secretKey, 8545, orverrideOptions);
+            
             let library = await deployer.deploy(ECTools);
 	        let libraries = {
 			"ECTools": library.contractAddress
@@ -35,25 +45,22 @@ let deployer = new etherlime.EtherlimeGanacheDeployer();
   
         });
 
-        it('should create ID contract with address', async function() {
+        it('should create ID contract with valid address', async function() {
 
-            let addressHash = utils.solidityKeccak256(['address'], [signerWallet.address]);
-            var addressHashBytes = ethers.utils.arrayify(addressHash);
-            let addressSig = signerWallet.signMessage(addressHashBytes);
-
+            let hashData = hash(masterSignerWallet);
             
-            identityProxy = await deployer.deploy(IdentityProxy, {}, identityContract.contractAddress, deployerWallet.address, addressHash, addressSig);
+            identityProxy = await deployer.deploy(IdentityProxy, {}, identityContract.contractAddress, deployerWallet.address, hashData.addressHash, hashData.addressSig);
             identityContractInstance = await deployer.wrapDeployedContract(IIdentityContract, identityProxy.contractAddress);
             
             assert.equal(identityContractInstance.contractAddress.length, 42)
             
         });
-
     })
 
     describe('execute service through ID contract', () => {
+        let deployer;
         beforeEach(async function() {
-
+            deployer = new etherlime.EtherlimeGanacheDeployer(accounts[0].secretKey, 8545, orverrideOptions);
             billboardService = await deployer.deploy(BillboardService); 
 
             let library = await deployer.deploy(ECTools);
@@ -63,12 +70,9 @@ let deployer = new etherlime.EtherlimeGanacheDeployer();
 
             identityContract = await deployer.deploy(IdentityContract,libraries);
 
-            let addressHash = utils.solidityKeccak256(['address'], [signerWallet.address]);
-            var addressHashBytes = ethers.utils.arrayify(addressHash);
-            let addressSig = signerWallet.signMessage(addressHashBytes);
+            let hashData = hash(masterSignerWallet);
 
-
-            identityProxy = await deployer.deploy(IdentityProxy, {}, identityContract.contractAddress, deployerWallet.address, addressHash, addressSig);
+            identityProxy = await deployer.deploy(IdentityProxy, {}, identityContract.contractAddress, deployerWallet.address, hashData.addressHash, hashData.addressSig);
             identityContractInstance = await deployer.wrapDeployedContract(IIdentityContract, identityProxy.contractAddress);
 
             await deployerWallet.send(identityContractInstance.contractAddress, 1000000000000000000);
@@ -76,32 +80,30 @@ let deployer = new etherlime.EtherlimeGanacheDeployer();
         });
 
         it('should execute service through identity', async function() {
-
             let reward = 100;
             let value = 20000;
 
-            let service = new ethers.Contract(billboardService.contractAddress, BillboardService.abi, signerWallet);
+            let service = new ethers.Contract(billboardService.contractAddress, BillboardService.abi, masterSignerWallet);
 
             let serviceDescriptor = (service.interface.functions.buy('Dessy'));
 	        let serviceData = serviceDescriptor.data;
 
-           
             let nonce = await identityContractInstance.contract.getNonce();
             
             let serviceDataHash = utils.solidityKeccak256(['bytes', 'uint256', 'uint256', 'address','uint256'], [utils.arrayify(serviceData), reward, value, billboardService.contractAddress, nonce.toString()]);
             let hashData = ethers.utils.arrayify(serviceDataHash);
-            let buyDataHashSignature = signerWallet.signMessage(hashData);
+            let buyDataHashSignature = masterSignerWallet.signMessage(hashData);
 
             let transaction = await identityContractInstance.contract.execute(billboardService.contractAddress, reward, value, serviceData, buyDataHashSignature);
             
             assert.equal(transaction.hash.length, 66)
         })
 
-        it('should throw if change reward argument', async function() {
+        it('should throw if reward argument is changed', async function() {
             let reward = 100;
             let value = 20000;
 
-            let service = new ethers.Contract(billboardService.contractAddress, BillboardService.abi, signerWallet);
+            let service = new ethers.Contract(billboardService.contractAddress, BillboardService.abi, masterSignerWallet);
 
             let serviceDescriptor = (service.interface.functions.buy('Dessy'));
 	        let serviceData = serviceDescriptor.data;
@@ -110,16 +112,16 @@ let deployer = new etherlime.EtherlimeGanacheDeployer();
             
             let serviceDataHash = utils.solidityKeccak256(['bytes', 'uint256', 'uint256', 'address','uint256'], [utils.arrayify(serviceData), 200, value, billboardService.contractAddress, nonce.toString()]);
             let hashData = ethers.utils.arrayify(serviceDataHash);
-            let buyDataHashSignature = signerWallet.signMessage(hashData);
+            let buyDataHashSignature = masterSignerWallet.signMessage(hashData);
 
             await expectThrow(identityContractInstance.contract.execute(billboardService.contractAddress, reward, value, serviceData, buyDataHashSignature));
         })
 
-        it('should throw if change value argument', async function() {
+        it('should throw if value argument is changed', async function() {
             let reward = 100;
             let value = 20000;
 
-            let service = new ethers.Contract(billboardService.contractAddress, BillboardService.abi, signerWallet);
+            let service = new ethers.Contract(billboardService.contractAddress, BillboardService.abi, masterSignerWallet);
 
             let serviceDescriptor = (service.interface.functions.buy('Dessy'));
 	        let serviceData = serviceDescriptor.data;
@@ -128,16 +130,16 @@ let deployer = new etherlime.EtherlimeGanacheDeployer();
             
             let serviceDataHash = utils.solidityKeccak256(['bytes', 'uint256', 'uint256', 'address','uint256'], [utils.arrayify(serviceData), reward, 50000, billboardService.contractAddress, nonce.toString()]);
             let hashData = ethers.utils.arrayify(serviceDataHash);
-            let buyDataHashSignature = signerWallet.signMessage(hashData);
+            let buyDataHashSignature = masterSignerWallet.signMessage(hashData);
 
             await expectThrow(identityContractInstance.contract.execute(billboardService.contractAddress, reward, value, serviceData, buyDataHashSignature));
         })
 
-        it('should throw if change the signiture of the buyDataHashSignature', async function() {
+        it('should throw if the signiture of the buyDataHashSignature is changed', async function() {
             let reward = 100;
             let value = 20000;
 
-            let service = new ethers.Contract(billboardService.contractAddress, BillboardService.abi, signerWallet);
+            let service = new ethers.Contract(billboardService.contractAddress, BillboardService.abi, masterSignerWallet);
 
             let serviceDescriptor = (service.interface.functions.buy('Dessy'));
 	        let serviceData = serviceDescriptor.data;
@@ -150,4 +152,221 @@ let deployer = new etherlime.EtherlimeGanacheDeployer();
 
             await expectThrow(identityContractInstance.contract.execute(billboardService.contractAddress, reward, value, serviceData, buyDataHashSignature));
         })
+
+        it('should emit action authorisation', async function() {
+            let reward = 100;
+            let value = 20000;
+
+            let service = new ethers.Contract(billboardService.contractAddress, BillboardService.abi, masterSignerWallet);
+            identityContractInstance = new ethers.Contract(identityContractInstance.contractAddress, IIdentityContract.abi, masterSignerWallet)
+
+            let serviceDescriptor = (service.interface.functions.buy('Dessy'));
+	        let serviceData = serviceDescriptor.data;
+
+            let nonce = await identityContractInstance.getNonce();
+            
+            let serviceDataHash = utils.solidityKeccak256(['bytes', 'uint256', 'uint256', 'address','uint256'], [utils.arrayify(serviceData), reward, value, billboardService.contractAddress, nonce.toString()]);
+            let hashData = ethers.utils.arrayify(serviceDataHash);
+            let buyDataHashSignature = masterSignerWallet.signMessage(hashData);
+
+            let transaction = await identityContractInstance.execute(billboardService.contractAddress, reward, value, serviceData, buyDataHashSignature);
+            const txReceipt = await settings.provider.getTransactionReceipt(transaction.hash);
+        
+            let event = identityContractInstance.interface.events.LogActionAuthorised;
+            const log = event.parse(txReceipt.logs[0].data)
+            assert.equal(log.signer.toLowerCase(), masterSignerWallet.address.toLowerCase()) 
+
+                    
+        })
+
+        it('should emit action executed', async function() {
+            let reward = 100;
+            let value = 20000;
+
+            let service = new ethers.Contract(billboardService.contractAddress, BillboardService.abi, masterSignerWallet);
+            identityContractInstance = new ethers.Contract(identityContractInstance.contractAddress, IIdentityContract.abi, masterSignerWallet)
+
+            let serviceDescriptor = (service.interface.functions.buy('Dessy'));
+	        let serviceData = serviceDescriptor.data;
+
+            let nonce = await identityContractInstance.getNonce();
+            
+            let serviceDataHash = utils.solidityKeccak256(['bytes', 'uint256', 'uint256', 'address','uint256'], [utils.arrayify(serviceData), reward, value, billboardService.contractAddress, nonce.toString()]);
+            let hashData = ethers.utils.arrayify(serviceDataHash);
+            let buyDataHashSignature = masterSignerWallet.signMessage(hashData);
+
+            let transaction = await identityContractInstance.execute(billboardService.contractAddress, reward, value, serviceData, buyDataHashSignature);
+            const txReceipt = await settings.provider.getTransactionReceipt(transaction.hash);
+
+            let event = identityContractInstance.interface.events.LogActionExecuted;
+
+            const log = event.parse(txReceipt.logs[1].data)
+            assert.equal(log.target, billboardService.contractAddress)
+           
+        })           
+
+        it('should emit reward payed', async function() {
+            let reward = 100;
+            let value = 20000;
+
+            let service = new ethers.Contract(billboardService.contractAddress, BillboardService.abi, masterSignerWallet);
+            identityContractInstance = new ethers.Contract(identityContractInstance.contractAddress, IIdentityContract.abi, masterSignerWallet)
+
+            let serviceDescriptor = (service.interface.functions.buy('Dessy'));
+	        let serviceData = serviceDescriptor.data;
+
+            let nonce = await identityContractInstance.getNonce();
+            
+            let serviceDataHash = utils.solidityKeccak256(['bytes', 'uint256', 'uint256', 'address','uint256'], [utils.arrayify(serviceData), reward, value, billboardService.contractAddress, nonce.toString()]);
+            let hashData = ethers.utils.arrayify(serviceDataHash);
+            let buyDataHashSignature = masterSignerWallet.signMessage(hashData);
+
+            let transaction = await identityContractInstance.execute(billboardService.contractAddress, reward, value, serviceData, buyDataHashSignature);
+            const txReceipt = await settings.provider.getTransactionReceipt(transaction.hash);
+
+            let event = identityContractInstance.interface.events.LogRewardsPaid;
+
+            const log = event.parse(txReceipt.logs[2].data)
+            assert.equal(log.rewardPaid, reward) 
+                 
+        })
+
+    })
+
+
+    describe('many identity owners', () => {
+        let deployer;
+        beforeEach(async function() {
+            deployer = new etherlime.EtherlimeGanacheDeployer(accounts[0].secretKey, 8545, orverrideOptions);
+            let library = await deployer.deploy(ECTools);
+	        let libraries = {
+			"ECTools": library.contractAddress
+		    }
+
+            identityContract = await deployer.deploy(IdentityContract,libraries);
+
+            let hashData = hash(masterSignerWallet);
+
+            identityProxy = await deployer.deploy(IdentityProxy, {}, identityContract.contractAddress, deployerWallet.address, hashData.addressHash, hashData.addressSig);
+            identityContractInstance = await deployer.wrapDeployedContract(IIdentityContract, identityProxy.contractAddress);
+
+            await deployerWallet.send(identityContractInstance.contractAddress, 1000000000000000000);
+        
+        });
+
+        it('should return masterSignerWallet as a signer', async function() {
+            let isSigner = await identityContractInstance.contract.checkSigner(masterSignerWallet.address);
+            assert.equal(isSigner, true)
+        });
+
+        it('should add new signer', async function() {
+            let newSigner = '0x56a32fff5e5a8b40d6a21538579fb8922df5258c'
+        
+            let hashData = hash(masterSignerWallet)
+
+            await identityContractInstance.contract.addSigner(newSigner, hashData.addressHash, hashData.addressSig)
+            let firstSigner = await identityContractInstance.contract.checkSigner(masterSignerWallet.address);
+            let secondSigner = await identityContractInstance.contract.checkSigner(newSigner);
+            assert.equal(firstSigner, true)
+            assert.equal(secondSigner, true)
+        });
+
+        it('should revert if new signer is invalid address', async function() {
+            let newSigner = '0x0000000000000000000000000000000000000000'
+        
+            let hashData = hash(masterSignerWallet)
+
+            await expectThrow(identityContractInstance.contract.addSigner(newSigner, hashData.addressHash, hashData.addressSig))
+        });
+
+        it('should revert if not the master signer tries to add new signer', async function() {
+            let newSigner = '0x56a32fff5e5a8b40d6a21538579fb8922df5258c'
+
+            let hashData = hash(deployerWallet)
+
+            await expectThrow(identityContractInstance.contract.addSigner(newSigner, hashData.addressHash, hashData.addressSig))
+        });
+
+        it('should remove signer', async function() {
+            let newSigner = '0x56a32fff5e5a8b40d6a21538579fb8922df5258c'
+            
+            let hashData = hash(masterSignerWallet)
+
+            await identityContractInstance.contract.addSigner(newSigner, hashData.addressHash, hashData.addressSig)
+            await identityContractInstance.contract.removeSigner(newSigner, hashData.addressHash, hashData.addressSig);
+            let isSigner = await identityContractInstance.contract.checkSigner(newSigner);
+            assert.equal(isSigner, false)
+        });
+
+        it('should revert if not the master signer tries to remove a signer', async function() {
+            let newSigner = '0x56a32fff5e5a8b40d6a21538579fb8922df5258c'
+            
+            let hashData = hash(masterSignerWallet)
+
+            await identityContractInstance.contract.addSigner(newSigner, hashData.addressHash, hashData.addressSig);
+
+            hashData = hash(deployerWallet);
+            
+            await expectThrow(identityContractInstance.contract.removeSigner(newSigner, hashData.addressHash, hashData.addressSig))
+        });
+
+        it('should revert if signer, but not the master signer tries to add new signer', async function() {
+            let newSigner = deployerWallet.address;
+            
+            let hashData = hash(masterSignerWallet)
+
+            await identityContractInstance.contract.addSigner(newSigner, hashData.addressHash, hashData.addressSig);
+
+            hashData = hash(deployerWallet);
+            
+            await expectThrow(identityContractInstance.contract.addSigner('0x56a32fff5e5a8b40d6a21538579fb8922df5258c', hashData.addressHash, hashData.addressSig))
+        })
+
+        it('should revert if signer, but not the master signer tries to remove a signer', async function() {
+            let newSigner = deployerWallet.address;
+            
+            let hashData = hash(masterSignerWallet)
+
+            await identityContractInstance.contract.addSigner(newSigner, hashData.addressHash, hashData.addressSig);
+            await identityContractInstance.contract.addSigner('0x56a32fff5e5a8b40d6a21538579fb8922df5258c', hashData.addressHash, hashData.addressSig);
+
+            hashData = hash(deployerWallet);
+            
+            await expectThrow(identityContractInstance.contract.removeSigner('0x56a32fff5e5a8b40d6a21538579fb8922df5258c', hashData.addressHash, hashData.addressSig))
+        })
+
+        it('should emit new signer added', async function() {
+            let newSigner = '0x56a32fff5e5a8b40d6a21538579fb8922df5258c'
+        
+            let hashData = hash(masterSignerWallet)
+
+            identityContractInstance = new ethers.Contract(identityContractInstance.contractAddress, IIdentityContract.abi, masterSignerWallet)
+
+            let transaction = await identityContractInstance.addSigner(newSigner, hashData.addressHash, hashData.addressSig)
+            let txReceipt = await settings.provider.getTransactionReceipt(transaction.hash);
+        
+            let event = identityContractInstance.interface.events.LogSignerAdded;
+            let log = event.parse(txReceipt.logs[0].data)
+            assert.equal(log.addedSigner.toLowerCase(), newSigner)        
+        })
+
+
+        it('should emit removed signer', async function() {
+            let newSigner = '0x56a32fff5e5a8b40d6a21538579fb8922df5258c'
+        
+            let hashData = hash(masterSignerWallet)
+
+            identityContractInstance = new ethers.Contract(identityContractInstance.contractAddress, IIdentityContract.abi, masterSignerWallet)
+
+            await identityContractInstance.addSigner(newSigner, hashData.addressHash, hashData.addressSig)
+            let transaction = await identityContractInstance.removeSigner(newSigner, hashData.addressHash, hashData.addressSig);
+            let txReceipt = await settings.provider.getTransactionReceipt(transaction.hash);
+        
+        
+            let event = identityContractInstance.interface.events.LogSignerRemoved;
+            let log = event.parse(txReceipt.logs[0].data)
+            assert.equal(log.removedSigner.toLowerCase(), newSigner)  
+                    
+        })
+
     })

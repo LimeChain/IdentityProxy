@@ -6,8 +6,7 @@ const relayerServiceInstance = new RelayerService();
 const ProxyController = (function () {
     const create = async function (req, res) {
         try {
-            const reqBody = req.body;
-            const body = _.pick(reqBody, ['addressHash', 'addressSig'])
+            const body = _.pick(req.body, ['addressHash', 'addressSig'])
             const result = await relayerServiceInstance.createProxy(body.addressHash, body.addressSig);
             res.send(result)
         } catch (e) {
@@ -29,9 +28,33 @@ const ProxyController = (function () {
         }
     }
 
+    const authorize = async function(req, res) {
+        try{
+            const body = _.pick(req.body, ['identityAddress', 'newSigner', 'addressHash', 'addressSig']);
+            const result = await relayerServiceInstance.authorizeSigner(body.identityAddress, body.newSigner, body.addressHash, body.addressSig);
+            res.send(result)
+        } catch(e) {
+            console.log(e)
+            res.status(400).send(e)
+        }
+    }
+
+    const removeAuthorization = async function(req, res) {
+        try{
+            const body = _.pick(req.body, ['identityAddress', 'signerToRemove', 'addressHash', 'addressSig']);
+            const result = await relayerServiceInstance.removeAuthorizedSigner(body.identityAddress, body.signerToRemove, body.addressHash, body.addressSig)
+            res.send(result)
+        } catch(e){
+            res.status(400).send(e)
+            console.log(e)
+        }
+    }
+
     return {
         create,
-        execute
+        execute,
+        authorize,
+        removeAuthorization
     }
 
 })()
