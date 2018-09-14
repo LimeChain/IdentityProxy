@@ -1,5 +1,7 @@
 const _ = require('lodash');
 const RelayerService = require('./../services/relayerService.js');
+let event = require('./../relayer.js')
+let nodeConnection = require('../services/nodeConnection');
 
 const relayerServiceInstance = new RelayerService();
 
@@ -8,6 +10,7 @@ const ProxyController = (function () {
         try {
             const body = _.pick(req.body, ['addressHash', 'addressSig'])
             const result = await relayerServiceInstance.createProxy(body.addressHash, body.addressSig);
+            nodeConnection.emitIdDataOnCreation(result);
             res.send(result)
         } catch (e) {
             console.log(e)
@@ -19,8 +22,8 @@ const ProxyController = (function () {
     const execute = async function (req, res) {
         try {
             const body = _.pick(req.body, ['identityAddress', 'serviceContractAddress', 'reward', 'wei', 'data', 'signedDataHash']);
-
             const result = await relayerServiceInstance.execute(body.identityAddress, body.serviceContractAddress, body.reward, body.wei, body.data, body.signedDataHash)
+            nodeConnection.emitIdDeployed(body.identityAddress)
             res.send(result);
         } catch (e) {
             res.status(400).send(e)

@@ -5,9 +5,8 @@ const Wallet = ethers.Wallet;
 const utils = ethers.utils;
 const settings = require('../config/settings.js');
 const connection = require('../config/blockchain-connection.js');
-const CounterfactualTransactionsService = require('./counterfactualTransactionsService.js');
 
-const transactionsStorage = new CounterfactualTransactionsService();
+const databaseManager = require('./database/databaseManager')
 
 
 class RelayerService {
@@ -31,7 +30,7 @@ class RelayerService {
 
 		const fullCounterfactualData = await this._extractCounterfactualParams(counterfactualTransaction);
 
-		transactionsStorage.upsertData(fullCounterfactualData.counterfactualContractAddress, fullCounterfactualData);
+		await databaseManager.addToDatabase(fullCounterfactualData.counterfactualContractAddress, fullCounterfactualData)
 
 		return fullCounterfactualData;
 	}
@@ -88,8 +87,8 @@ class RelayerService {
 	}
 
 	async deployProxy(counterfactualContractAddress) {
-		const fullCounterfactualData = transactionsStorage.getData(counterfactualContractAddress);
-		// TODO check Tx count
+		let record = await databaseManager.findRecord(counterfactualContractAddress)
+		const fullCounterfactualData = record.fullData;
 		
 		const counterfactualBalance = await connection.provider.getBalance(counterfactualContractAddress);
 		
@@ -107,7 +106,7 @@ class RelayerService {
 		
 	
 		const deployTx = await connection.provider.sendTransaction(fullCounterfactualData.counterfactualTransaction);
-		transactionsStorage.removeData(counterfactualContractAddress);
+		
 		return {
 			hash: deployTx
 		};
@@ -118,8 +117,9 @@ class RelayerService {
 		let reward = utils.bigNumberify(_reward);
 		let wei = utils.bigNumberify(_wei);
 
-		const counterfactualData = transactionsStorage.getData(identityAddress);
-		if (counterfactualData) {
+		let record = await databaseManager.findRecord(identityAddress)
+
+		if (record) {
 			// TODO figure out a way not to be drained by failing of the next TX
 			const deployTx = await this.deployProxy(identityAddress);
 			await connection.provider.waitForTransaction(deployTx.hash);
@@ -133,6 +133,8 @@ class RelayerService {
 			throw new Error("The reward to the relayer should be bigger than transaction costs")
 		}
 		const transaction = await identityContract.execute(serviceContractAddress, reward, wei, data, signedDataHash);
+
+		await databaseManager.updateStatus(identityAddress)
 
 		return transaction.hash
 	}
