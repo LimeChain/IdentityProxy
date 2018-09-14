@@ -139,6 +139,7 @@ class RelayerService {
 		return transaction.hash
 	}
 
+	
 	async authorizeSigner(identityAddress, newSigner, addressHash, addressSig) {
 		const identityContract = new ethers.Contract(identityAddress, IIdentityContract.abi, connection.wallet);
 		const transaction = await identityContract.addSigner(newSigner, addressHash, addressSig);
