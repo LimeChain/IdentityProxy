@@ -12,9 +12,9 @@ contract IIdentityContract {
 
     function addSigner(address _signer, bytes32 addressHash, bytes addressSig) public;
 
-	function removeSigner(address _signer, bytes32 addressHash, bytes addressSig) public;
+    function removeSigner(address _signer, bytes32 addressHash, bytes addressSig) public;
 
-	function checkSigner(address _signer) public view returns(bool);
+    function checkSigner(address _signer) public view returns(bool);
 
     function getNonce() public view returns(uint256);
 
